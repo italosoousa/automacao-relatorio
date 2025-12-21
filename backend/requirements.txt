@@ -1,0 +1,6 @@
+# Backend dependencies
+fastapi
+uvicorn[standard]
+python-multipart
+pandas
+openpyxl
