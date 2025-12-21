@@ -8,9 +8,9 @@ export interface DashboardRow {
   descricao: string;
   estado: string | null;
   lucro_bruto: number | null;
+  status_group: string; // NOVO CAMPO
 }
 
-// Novo tipo para os itens do Drawer
 export interface MissingSkuItem {
   sku: string | null;
   descricao: string;
@@ -23,11 +23,17 @@ export interface DashboardSummary {
   skus_sem_cadastro: number;
 }
 
+// NOVO TIPO PARA OPÇÕES DE FILTRO
+export interface FilterOptions {
+  states: string[];
+  status_group: string[];
+}
+
 export interface DashboardResponse {
   rows: DashboardRow[];
   summary: DashboardSummary;
-  states: string[];
-  missing_skus: MissingSkuItem[]; // Nova lista
+  filter_options: FilterOptions; // ALTERADO
+  missing_skus: MissingSkuItem[];
 }
 
 export const getDashboardPreview = async (
@@ -51,7 +57,6 @@ export const getDashboardPreview = async (
     return response.data;
   } catch (error) {
     if (axios.isAxiosError(error) && error.response) {
-      // Lança o erro com a mensagem da API para ser tratada na UI
       throw new Error(error.response.data.detail || 'Ocorreu um erro desconhecido na API.');
     }
     throw new Error('Não foi possível conectar ao servidor. Verifique se o backend está rodando.');

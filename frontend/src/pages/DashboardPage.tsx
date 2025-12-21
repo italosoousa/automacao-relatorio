@@ -4,9 +4,9 @@ import { Layout, Typography, Alert, Spin, Result, Space } from 'antd';
 import { FileUpload } from '../components/FileUpload';
 import { getDashboardPreview, DashboardResponse } from '../api/dashboard';
 import { SummaryCards } from '../components/SummaryCards';
-import { StateFilter } from '../components/StateFilter';
+import { StatusFilter } from '../components/StatusFilter'; // ALTERADO
 import { DashboardTable } from '../components/DashboardTable';
-import { MissingSkusDrawer } from '../components/MissingSkusDrawer'; // Importado
+import { MissingSkusDrawer } from '../components/MissingSkusDrawer';
 
 const { Content } = Layout;
 const { Title, Text } = Typography;
@@ -15,14 +15,16 @@ export const DashboardPage: React.FC = () => {
   const [dashboardData, setDashboardData] = useState<DashboardResponse | null>(null);
   const [loading, setLoading] = useState<boolean>(false);
   const [error, setError] = useState<string | null>(null);
-  const [selectedState, setSelectedState] = useState<string | null>(null);
-  const [isDrawerOpen, setIsDrawerOpen] = useState(false); // Estado do Drawer
+  const [selectedStatusGroup, setSelectedStatusGroup] = useState<string | null>(null);
+  const [selectedOriginalState, setSelectedOriginalState] = useState<string | null>(null); // NOVO ESTADO
+  const [isDrawerOpen, setIsDrawerOpen] = useState(false);
 
   const handleGenerate = async (mlFile: File, baseFile: File) => {
     setLoading(true);
     setError(null);
     setDashboardData(null);
-    setSelectedState(null);
+    setSelectedStatusGroup(null);
+    setSelectedOriginalState(null); // RESET NOVO ESTADO
 
     try {
       const data = await getDashboardPreview(mlFile, baseFile);
@@ -34,19 +36,47 @@ export const DashboardPage: React.FC = () => {
     }
   };
 
-  const filteredRows = useMemo(() => {
+  // Filtragem por Status Group
+  const filteredByStatusGroup = useMemo(() => {
     if (!dashboardData) return [];
-    if (!selectedState) return dashboardData.rows;
-    return dashboardData.rows.filter(row => row.estado === selectedState);
-  }, [dashboardData, selectedState]);
-  
+    if (!selectedStatusGroup) return dashboardData.rows;
+    return dashboardData.rows.filter(row => row.status_group === selectedStatusGroup);
+  }, [dashboardData, selectedStatusGroup]);
+
+  // Opções de Estado disponíveis baseadas no Status Group selecionado
+  const availableOriginalStates = useMemo(() => {
+    if (!filteredByStatusGroup || filteredByStatusGroup.length === 0) return [];
+    const states = new Set<string>();
+    filteredByStatusGroup.forEach(row => {
+      if (row.estado) states.add(row.estado);
+    });
+    return Array.from(states).sort();
+  }, [filteredByStatusGroup]);
+
+  // Filtragem final combinada (Status Group + Estado Original)
+  const finalFilteredRows = useMemo(() => {
+    if (!selectedOriginalState) return filteredByStatusGroup;
+    return filteredByStatusGroup.filter(row => row.estado === selectedOriginalState);
+  }, [filteredByStatusGroup, selectedOriginalState]);
+
+  // Lucro e quantidade filtrados
   const filteredProfit = useMemo(() => {
-    if (!selectedState || filteredRows.length === 0) return undefined;
-    return filteredRows.reduce((acc, row) => acc + (row.lucro_bruto || 0), 0);
-  }, [filteredRows, selectedState]);
+    if (!finalFilteredRows || finalFilteredRows.length === 0) return undefined;
+    return finalFilteredRows.reduce((acc, row) => acc + (row.lucro_bruto || 0), 0);
+  }, [finalFilteredRows]);
+
+  const filteredCount = useMemo(() => {
+    return finalFilteredRows.length;
+  }, [finalFilteredRows]);
+
+  // Handler para mudança do filtro de Status Group, reseta o filtro de Estado Original
+  const handleStatusGroupChange = (status: string | null) => {
+    setSelectedStatusGroup(status);
+    setSelectedOriginalState(null); // Resetar filtro de estado ao mudar o status group
+  };
 
   const handleOpenDrawer = () => setIsDrawerOpen(true);
-  const handleCloseDrawer = () => setIsDrawerOpen(false);
+  const handleCloseDrawer = () => setIsDrawerOpen(false); // Corrigido o typo setIsDrawerInClose
 
   return (
     <Content style={{ padding: '24px 48px' }}>
@@ -73,18 +103,29 @@ export const DashboardPage: React.FC = () => {
           <Space direction="vertical" size="large" style={{ width: '100%' }}>
             <SummaryCards 
                 summary={dashboardData.summary} 
-                filteredCount={filteredRows.length} 
+                filteredCount={filteredCount} 
                 filteredProfit={filteredProfit}
-                isFilterActive={!!selectedState}
-                onMissingSkusClick={handleOpenDrawer} // Conectado
+                isFilterActive={!!selectedStatusGroup || !!selectedOriginalState} // Atualizado
+                onMissingSkusClick={handleOpenDrawer}
             />
-            <StateFilter states={dashboardData.states} onFilterChange={setSelectedState} disabled={loading} />
-            <DashboardTable data={filteredRows} loading={loading} />
+            <Space> {/* Agrupa os filtros */}
+                <StatusFilter 
+                    statusOptions={dashboardData.filter_options.status_group} 
+                    onFilterChange={handleStatusGroupChange} // Usa o novo handler
+                    disabled={loading} 
+                />
+                <OriginalStateFilter 
+                    stateOptions={availableOriginalStates}
+                    onFilterChange={setSelectedOriginalState}
+                    disabled={loading || !selectedStatusGroup} // Desabilita se não houver status group selecionado
+                    value={selectedOriginalState} // Passa o valor para controle do Select
+                />
+            </Space>
+            <DashboardTable data={finalFilteredRows} loading={loading} />
           </Space>
         )}
       </Space>
       
-      {/* Drawer renderizado aqui, fora do fluxo principal */}
       <MissingSkusDrawer 
         open={isDrawerOpen}
         onClose={handleCloseDrawer}

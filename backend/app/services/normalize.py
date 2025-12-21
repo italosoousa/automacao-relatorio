@@ -45,3 +45,39 @@ def find_column(df: pd.DataFrame, possible_names: List[str], fallback_index: int
         return df.columns[fallback_index]
         
     return None
+
+
+def normalize_status_group(text: str) -> str:
+    """
+    Normaliza o status do pedido em um dos 4 grupos definidos.
+    A ordem de verificação é importante: MEDIACAO > CANCELADO > ENVIADO > A_ENVIAR.
+    """
+    if not isinstance(text, str):
+        return "A_ENVIAR"
+
+    # Reutiliza a normalização de texto para consistência (lowercase, sem acentos, etc)
+    # Passamos por uma normalização inicial para remover acentos e caracteres especiais
+    normalized_text = normalize_col_name(text)
+
+    # 1. MEDIACAO
+    mediation_keys = ["mediacao", "reclamacao"]
+    if any(key in normalized_text for key in mediation_keys):
+        return "MEDIACAO"
+
+    # 2. CANCELADO
+    cancel_keys = ["cancel", "cancelada", "venda cancelada", "pacote cancelado"]
+    if any(key in normalized_text for key in cancel_keys):
+        return "CANCELADO"
+
+    # 3. ENVIADO
+    sent_keys = ["entregue", "a caminho", "ponto de retirada", "chega"]
+    if any(key in normalized_text for key in sent_keys):
+        return "ENVIADO"
+
+    # 4. A_ENVIAR (inclui o fallback)
+    to_send_keys = ["etiqueta", "nf", "nfe", "informar", "para enviar", "combine"]
+    if any(key in normalized_text for key in to_send_keys):
+        return "A_ENVIAR"
+
+    # Fallback default
+    return "A_ENVIAR"

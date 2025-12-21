@@ -23,6 +23,17 @@ const ProfitTag: React.FC<{ value: number | null }> = ({ value }) => {
     return <span style={{ color, fontWeight: 500 }}>{formatted}</span>;
 }
 
+const StatusGroupTag: React.FC<{ status: string }> = ({ status }) => {
+    const colorMapping: { [key: string]: string } = {
+        'ENVIADO': 'blue',
+        'A_ENVIAR': 'cyan',
+        'MEDIACAO': 'orange',
+        'CANCELADO': 'red',
+    };
+
+    return <Tag color={colorMapping[status] || 'default'}>{status}</Tag>;
+};
+
 const columns: ColumnsType<DashboardRow> = [
   {
     title: 'Código do Produto (SKU)',
@@ -46,6 +57,13 @@ const columns: ColumnsType<DashboardRow> = [
         }
         return text;
     }
+  },
+  {
+    title: 'Status',
+    dataIndex: 'status_group',
+    key: 'status_group',
+    sorter: (a, b) => a.status_group.localeCompare(b.status_group),
+    render: (status) => <StatusGroupTag status={status} />,
   },
   {
     title: 'Estado',

@@ -7,8 +7,8 @@ class DashboardRow(BaseModel):
     descricao: str
     estado: Optional[str]
     lucro_bruto: Optional[float]
+    status_group: str # NOVO CAMPO
 
-# Novo schema para a lista de SKUs não encontrados
 class MissingSkuRow(BaseModel):
     sku: Optional[str]
     descricao: str
@@ -19,8 +19,13 @@ class DashboardSummary(BaseModel):
     total_itens: int
     skus_sem_cadastro: int
 
+# NOVO MODELO PARA FILTROS
+class FilterOptions(BaseModel):
+    states: List[str]
+    status_group: List[str]
+
 class DashboardResponse(BaseModel):
     rows: List[DashboardRow]
     summary: DashboardSummary
-    states: List[str]
-    missing_skus: List[MissingSkuRow] # Nova lista
+    filter_options: FilterOptions # ALTERADO DE 'states'
+    missing_skus: List[MissingSkuRow]
