@@ -63,6 +63,10 @@ def process_dashboard_data(df_ml: pd.DataFrame, df_base: pd.DataFrame) -> Dict[s
 
     # 5. Calcular lucro e tratar SKUs
     df_merged['lucro_bruto'] = df_merged['valor_ml'] - df_merged['custo']
+
+    # Nova regra de negócio: Zerar lucro para status CANCELADO ou MEDIACAO
+    df_merged.loc[df_merged['status_group'].isin(['CANCELADO', 'MEDIACAO']), 'lucro_bruto'] = 0
+    
     df_merged['lucro_bruto'] = df_merged['lucro_bruto'].replace({np.nan: None})
     df_merged['descricao'] = df_merged['descricao_base'].fillna(df_merged['descricao_ml'])
     df_merged['descricao'].fillna("SKU sem cadastro na base", inplace=True)

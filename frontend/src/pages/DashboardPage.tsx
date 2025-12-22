@@ -68,7 +68,7 @@ export const DashboardPage: React.FC = () => {
   // 4) Lucro e quantidade filtrados (baseado no filtro final)
   const filteredProfit = useMemo(() => {
     if (!finalFilteredRows.length) return undefined;
-    return finalFilteredRows.reduce((acc, row) => acc + (row.lucro_bruto || 0), 0);
+    return finalFilteredRows.reduce((acc, row) => acc + (row.lucro_bruto ?? 0), 0);
   }, [finalFilteredRows]);
 
   const filteredCount = useMemo(() => finalFilteredRows.length, [finalFilteredRows]);

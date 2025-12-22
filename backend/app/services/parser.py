@@ -16,7 +16,7 @@ def read_spreadsheet(file: UploadFile) -> pd.DataFrame:
 
     try:
         if filename.endswith('.xlsx'):
-            return pd.read_excel(io.BytesIO(content), engine='openpyxl')
+            return pd.read_excel(io.BytesIO(content), engine='openpyxl', skiprows=6)
         elif filename.endswith('.csv'):
             # Tenta detectar o separador, mas assume ; ou , como padrão
             try:
