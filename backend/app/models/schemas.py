@@ -3,11 +3,23 @@ from typing import List, Optional, Dict, Any
 from pydantic import BaseModel
 
 class DashboardRow(BaseModel):
+    # Campos existentes
     sku: Optional[str]
     descricao: str
     estado: Optional[str]
     lucro_bruto: Optional[float]
-    status_group: str # NOVO CAMPO
+    status_group: str
+
+    # Novos campos para o modal de detalhes
+    sale_number: Optional[str]
+    sale_date: Optional[str]
+    status_description: Optional[str]
+    revenue_product: Optional[float]
+    fee_taxes: Optional[float]
+    shipping_fees: Optional[float]
+    total: Optional[float]
+    cost: Optional[float]
+    ml_listing_id: Optional[str]
 
 class MissingSkuRow(BaseModel):
     sku: Optional[str]

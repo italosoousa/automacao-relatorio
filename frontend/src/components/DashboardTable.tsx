@@ -111,7 +111,8 @@ function buildRowSignature(row: DashboardRow) {
 export const DashboardTable: React.FC<{
   data: DashboardRow[];
   loading: boolean;
-}> = ({ data, loading }) => {
+  onRowClick: (record: DashboardRow) => void; // <-- Nova prop
+}> = ({ data, loading, onRowClick }) => {
   /**
    * Gera __rowKey estável sem usar index (evita warning do AntD)
    */
@@ -143,6 +144,12 @@ export const DashboardTable: React.FC<{
       }}
       scroll={{ x: 'max-content' }}
       size="middle"
+      onRow={(record) => { // <-- Nova propriedade
+        return {
+          onClick: () => onRowClick(record),
+          style: { cursor: 'pointer' },
+        };
+      }}
     />
   );
 };

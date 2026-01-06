@@ -1,6 +1,7 @@
 # /backend/app/main.py
 from fastapi import FastAPI, File, UploadFile, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
+import traceback
 
 from app.services.parser import read_spreadsheet
 from app.services.dashboard import process_dashboard_data
@@ -9,14 +10,14 @@ from app.models.schemas import DashboardResponse
 app = FastAPI(
     title="Análise de Planilhas API",
     description="API para processar e analisar planilhas de vendas e produtos.",
-    version="1.0.0"
+    version="1.0.0",
 )
 
-# Configuração do CORS para permitir requisições do frontend
+# CORS (frontend Vite/React)
 origins = [
-    "http://localhost:5173",  # Endereço padrão do Vite
+    "http://localhost:5173",
     "http://127.0.0.1:5173",
-    "http://localhost:3000", # Endereço comum de desenvolvimento React
+    "http://localhost:3000",
 ]
 
 app.add_middleware(
@@ -27,38 +28,49 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
+
 @app.get("/api/health", tags=["Monitoring"])
 def health_check():
-    """Endpoint de verificação de saúde."""
     return {"status": "ok"}
 
+
 @app.post("/api/dashboard/preview", response_model=DashboardResponse, tags=["Dashboard"])
-def get_dashboard_preview(ml_file: UploadFile = File(...), base_file: UploadFile = File(...)):
+def get_dashboard_preview(
+    ml_file: UploadFile = File(...),
+    base_file: UploadFile = File(...),
+):
     """
     Recebe duas planilhas (Mercado Livre e Base de Produtos), processa os dados
     e retorna uma estrutura JSON para exibição em um dashboard.
     """
-    if not ml_file or not base_file:
+    if ml_file is None or base_file is None:
         raise HTTPException(status_code=400, detail="Ambos os arquivos são obrigatórios.")
 
+    # 1) Ler planilhas
     try:
         df_ml = read_spreadsheet(ml_file)
         df_base = read_spreadsheet(base_file)
-    except HTTPException as e:
-        # Repassa exceções do leitor de planilhas
-        raise e
+    except HTTPException:
+        # já tem status_code/detail corretos
+        raise
     except Exception as e:
-        # Captura outras exceções inesperadas durante a leitura
-        raise HTTPException(status_code=500, detail=f"Erro inesperado ao ler os arquivos: {str(e)}")
+        print("\n" + "=" * 80)
+        print("ERRO AO LER AS PLANILHAS (read_spreadsheet)")
+        print(traceback.format_exc())
+        print("=" * 80 + "\n")
+        raise HTTPException(status_code=500, detail=f"Erro ao ler os arquivos: {str(e)}")
 
+    # 2) Processar dados do dashboard
     try:
-        # Processa os dados para gerar o dashboard
         result = process_dashboard_data(df_ml, df_base)
         return result
     except ValueError as e:
-        # Erros de negócio, como colunas não encontradas
+        # Erros de regra/colunas obrigatórias
         raise HTTPException(status_code=400, detail=str(e))
     except Exception as e:
-        # Captura outras exceções inesperadas durante o processamento
-        raise HTTPException(status_code=500, detail=f"Erro inesperado ao processar os dados: {str(e)}")
-
+        # Mostra o erro real no terminal e devolve detail para o frontend
+        print("\n" + "=" * 80)
+        print("ERRO AO PROCESSAR O DASHBOARD (process_dashboard_data)")
+        print(traceback.format_exc())
+        print("=" * 80 + "\n")
+        raise HTTPException(status_code=500, detail=str(e))

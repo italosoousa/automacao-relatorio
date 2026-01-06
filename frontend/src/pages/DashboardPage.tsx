@@ -3,12 +3,13 @@ import React, { useState, useMemo } from 'react';
 import { Layout, Typography, Alert, Spin, Result, Space } from 'antd';
 
 import { FileUpload } from '../components/FileUpload';
-import { getDashboardPreview, DashboardResponse } from '../api/dashboard';
+import { getDashboardPreview, DashboardResponse, DashboardRow } from '../api/dashboard';
 import { SummaryCards } from '../components/SummaryCards';
 import { StatusFilter } from '../components/StatusFilter';
-import { OriginalStateFilter  } from '../components/OriginalStateFilter'; // ✅ CORRIGIDO (antes era OriginalStateFilter)
+import { OriginalStateFilter } from '../components/OriginalStateFilter';
 import { DashboardTable } from '../components/DashboardTable';
 import { MissingSkusDrawer } from '../components/MissingSkusDrawer';
+import { ProductDetailsModal } from '../components/ProductDetailsModal';
 
 const { Content } = Layout;
 const { Title, Text } = Typography;
@@ -22,6 +23,10 @@ export const DashboardPage: React.FC = () => {
   const [selectedOriginalState, setSelectedOriginalState] = useState<string | null>(null);
 
   const [isDrawerOpen, setIsDrawerOpen] = useState(false);
+
+  // --- State para o Modal de Detalhes ---
+  const [isModalOpen, setIsModalOpen] = useState(false);
+  const [selectedRow, setSelectedRow] = useState<DashboardRow | null>(null);
 
   const handleGenerate = async (mlFile: File, baseFile: File) => {
     setLoading(true);
@@ -40,6 +45,17 @@ export const DashboardPage: React.FC = () => {
     } finally {
       setLoading(false);
     }
+  };
+
+  // --- Handlers do Modal ---
+  const handleRowClick = (record: DashboardRow) => {
+    setSelectedRow(record);
+    setIsModalOpen(true);
+  };
+
+  const handleCloseModal = () => {
+    setIsModalOpen(false);
+    setSelectedRow(null);
   };
 
   // 1) Filtragem por Status Group
@@ -139,7 +155,11 @@ export const DashboardPage: React.FC = () => {
             </Space>
 
 
-            <DashboardTable data={finalFilteredRows} loading={loading} />
+            <DashboardTable 
+              data={finalFilteredRows} 
+              loading={loading}
+              onRowClick={handleRowClick}
+            />
           </Space>
         )}
       </Space>
@@ -148,6 +168,12 @@ export const DashboardPage: React.FC = () => {
         open={isDrawerOpen}
         onClose={handleCloseDrawer}
         items={dashboardData?.missing_skus || []}
+      />
+
+      <ProductDetailsModal
+        open={isModalOpen}
+        onClose={handleCloseModal}
+        data={selectedRow}
       />
     </Content>
   );
