@@ -1,6 +1,6 @@
 // /frontend/src/pages/DashboardPage.tsx
 import React, { useState, useMemo } from 'react';
-import { Layout, Typography, Alert, Spin, Result, Space } from 'antd';
+import { Layout, Typography, Alert, Spin, Result, Space, Input } from 'antd';
 
 import { FileUpload } from '../components/FileUpload';
 import { getDashboardPreview, DashboardResponse, DashboardRow } from '../api/dashboard';
@@ -24,9 +24,12 @@ export const DashboardPage: React.FC = () => {
 
   const [isDrawerOpen, setIsDrawerOpen] = useState(false);
 
-  // --- State para o Modal de Detalhes ---
+  // --- Modal de Detalhes ---
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [selectedRow, setSelectedRow] = useState<DashboardRow | null>(null);
+
+  // --- Barra de pesquisa ---
+  const [searchTerm, setSearchTerm] = useState<string>('');
 
   const handleGenerate = async (mlFile: File, baseFile: File) => {
     setLoading(true);
@@ -36,6 +39,7 @@ export const DashboardPage: React.FC = () => {
     // reset filtros
     setSelectedStatusGroup(null);
     setSelectedOriginalState(null);
+    setSearchTerm('');
 
     try {
       const data = await getDashboardPreview(mlFile, baseFile);
@@ -81,13 +85,27 @@ export const DashboardPage: React.FC = () => {
     return filteredByStatusGroup.filter((row) => row.estado === selectedOriginalState);
   }, [filteredByStatusGroup, selectedOriginalState]);
 
-  // 4) Lucro e quantidade filtrados (baseado no filtro final)
-  const filteredProfit = useMemo(() => {
-    if (!finalFilteredRows.length) return undefined;
-    return finalFilteredRows.reduce((acc, row) => acc + (row.lucro_bruto ?? 0), 0);
-  }, [finalFilteredRows]);
+  // 4) Busca textual (SKU, Nº da venda, Descrição) aplicada por último
+  const searchedRows = useMemo(() => {
+    const term = searchTerm.trim().toLowerCase();
+    if (!term) return finalFilteredRows;
 
-  const filteredCount = useMemo(() => finalFilteredRows.length, [finalFilteredRows]);
+    return finalFilteredRows.filter((row) => {
+      const sku = (row.sku ?? '').toString().toLowerCase();
+      const saleNumber = (row.sale_number ?? '').toString().toLowerCase();
+      const desc = (row.descricao ?? '').toString().toLowerCase();
+
+      return sku.includes(term) || saleNumber.includes(term) || desc.includes(term);
+    });
+  }, [finalFilteredRows, searchTerm]);
+
+  // 5) Lucro e quantidade filtrados (baseado no resultado final)
+  const filteredProfit = useMemo(() => {
+    if (!searchedRows.length) return undefined;
+    return searchedRows.reduce((acc, row) => acc + (row.lucro_bruto ?? 0), 0);
+  }, [searchedRows]);
+
+  const filteredCount = useMemo(() => searchedRows.length, [searchedRows]);
 
   // Quando muda o Status, reseta o Estado
   const handleStatusGroupChange = (status: string | null) => {
@@ -97,6 +115,8 @@ export const DashboardPage: React.FC = () => {
 
   const handleOpenDrawer = () => setIsDrawerOpen(true);
   const handleCloseDrawer = () => setIsDrawerOpen(false);
+
+  const hasAnyFilter = !!selectedStatusGroup || !!selectedOriginalState || !!searchTerm.trim();
 
   return (
     <Content style={{ padding: '24px 48px' }}>
@@ -118,7 +138,6 @@ export const DashboardPage: React.FC = () => {
           />
         )}
 
-        {/* ✅ Corrigido: Spin com tip precisa ser nested ou fullscreen */}
         {loading && <Spin spinning tip="Processando planilhas..." fullscreen />}
 
         {!loading && !error && !dashboardData && (
@@ -135,11 +154,20 @@ export const DashboardPage: React.FC = () => {
               summary={dashboardData.summary}
               filteredCount={filteredCount}
               filteredProfit={filteredProfit}
-              isFilterActive={!!selectedStatusGroup || !!selectedOriginalState}
+              isFilterActive={hasAnyFilter}
               onMissingSkusClick={handleOpenDrawer}
             />
 
-            <Space>
+            {/* Barra de pesquisa */}
+            <Input.Search
+              placeholder="Buscar por SKU, número da venda ou descrição..."
+              allowClear
+              value={searchTerm}
+              onChange={(e) => setSearchTerm(e.target.value)}
+              style={{ maxWidth: 520 }}
+            />
+
+            <Space wrap>
               <StatusFilter
                 statusOptions={dashboardData.filter_options.status_group}
                 onFilterChange={handleStatusGroupChange}
@@ -154,9 +182,8 @@ export const DashboardPage: React.FC = () => {
               />
             </Space>
 
-
-            <DashboardTable 
-              data={finalFilteredRows} 
+            <DashboardTable
+              data={searchedRows}
               loading={loading}
               onRowClick={handleRowClick}
             />
