@@ -1,40 +1,50 @@
 // /frontend/src/api/dashboard.ts
 import axios from "axios";
 
+// Detecta se está rodando em produção (Vercel)
+const isProduction = (): boolean => {
+  if (typeof window === 'undefined') return false;
+  const hostname = window.location.hostname;
+  // Detecta se está no Vercel ou em produção
+  return hostname.includes('vercel.app') || 
+         hostname.includes('netlify.app') || 
+         import.meta.env.PROD ||
+         (hostname !== 'localhost' && hostname !== '127.0.0.1');
+};
+
 // Normaliza a URL da API para garantir que sempre tenha protocolo
 const normalizeApiUrl = (url: string | undefined): string => {
-  if (!url) {
-    // Em produção (Vercel), se a variável não estiver configurada, usa a URL do Railway
-    if (import.meta.env.PROD) {
-      console.warn(
-        "⚠️ VITE_API_BASE_URL não configurada! " +
-        "Configure a variável de ambiente no Vercel: https://automacao-relatorio-production.up.railway.app"
-      );
-      // Fallback para produção: URL do Railway
-      return "https://automacao-relatorio-production.up.railway.app";
+  const envUrl = url || import.meta.env.VITE_API_BASE_URL;
+  
+  if (envUrl) {
+    // Remove espaços e barras no final
+    let normalizedUrl = envUrl.trim().replace(/\/+$/, "");
+    
+    // Se não começar com http:// ou https://, adiciona https://
+    if (!normalizedUrl.match(/^https?:\/\//i)) {
+      normalizedUrl = `https://${normalizedUrl}`;
     }
-    // Em desenvolvimento, usa localhost
-    return "http://127.0.0.1:8000";
+    
+    return normalizedUrl;
   }
   
-  // Remove espaços e barras no final
-  url = url.trim().replace(/\/+$/, "");
-  
-  // Se não começar com http:// ou https://, adiciona https://
-  if (!url.match(/^https?:\/\//i)) {
-    url = `https://${url}`;
+  // Se não houver variável de ambiente configurada
+  if (isProduction()) {
+    // Em produção, sempre usa a URL do Railway
+    console.log("🔗 Usando URL padrão do Railway (produção)");
+    return "https://automacao-relatorio-production.up.railway.app";
   }
   
-  return url;
+  // Em desenvolvimento, usa localhost
+  return "http://127.0.0.1:8000";
 };
 
 // Usa variável de ambiente ou fallback
 const API_BASE_URL = normalizeApiUrl(import.meta.env.VITE_API_BASE_URL);
 
-// Log da URL sendo usada (apenas em desenvolvimento)
-if (import.meta.env.DEV) {
-  console.log("🔗 API Base URL:", API_BASE_URL);
-}
+// Log da URL sendo usada
+console.log("🔗 API Base URL:", API_BASE_URL);
+console.log("🌍 Ambiente:", isProduction() ? "Produção" : "Desenvolvimento");
 
 export interface DashboardRow {
   // Campos existentes
