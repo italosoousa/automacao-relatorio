@@ -1,0 +1,56 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <title>PWA Icon Generator</title>
+</head>
+<body>
+  <canvas id="canvas" width="512" height="512"></canvas>
+  <script>
+    const canvas = document.getElementById('canvas');
+    const ctx = canvas.getContext('2d');
+    
+    // Fundo azul
+    ctx.fillStyle = '#1677ff';
+    ctx.fillRect(0, 0, 512, 512);
+    
+    // Texto branco
+    ctx.fillStyle = '#ffffff';
+    ctx.font = 'bold 200px Arial';
+    ctx.textAlign = 'center';
+    ctx.textBaseline = 'middle';
+    ctx.fillText('📊', 256, 256);
+    
+    // Download 192x192
+    canvas.width = 192;
+    canvas.height = 192;
+    ctx.fillStyle = '#1677ff';
+    ctx.fillRect(0, 0, 192, 192);
+    ctx.fillStyle = '#ffffff';
+    ctx.font = 'bold 80px Arial';
+    ctx.textAlign = 'center';
+    ctx.textBaseline = 'middle';
+    ctx.fillText('📊', 96, 96);
+    
+    const link192 = document.createElement('a');
+    link192.download = 'pwa-192x192.png';
+    link192.href = canvas.toDataURL();
+    link192.click();
+    
+    // Download 512x512
+    canvas.width = 512;
+    canvas.height = 512;
+    ctx.fillStyle = '#1677ff';
+    ctx.fillRect(0, 0, 512, 512);
+    ctx.fillStyle = '#ffffff';
+    ctx.font = 'bold 200px Arial';
+    ctx.textAlign = 'center';
+    ctx.textBaseline = 'middle';
+    ctx.fillText('📊', 256, 256);
+    
+    const link512 = document.createElement('a');
+    link512.download = 'pwa-512x512.png';
+    link512.href = canvas.toDataURL();
+    link512.click();
+  </script>
+</body>
+</html>

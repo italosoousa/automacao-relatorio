@@ -41,8 +41,8 @@ export const FileUpload: React.FC<FileUploadProps> = ({ onGenerate, loading }) =
 
   return (
     <Card title="Upload de Planilhas">
-      <Row gutter={16}>
-        <Col span={12}>
+      <Row gutter={[16, 16]}>
+        <Col xs={24} sm={24} md={12}>
           <div style={{ marginBottom: 16 }}>
             <Dragger
               {...commonDraggerProps}
@@ -58,7 +58,7 @@ export const FileUpload: React.FC<FileUploadProps> = ({ onGenerate, loading }) =
           </div>
         </Col>
 
-        <Col span={12}>
+        <Col xs={24} sm={24} md={12}>
           <div style={{ marginBottom: 16 }}>
             <Dragger
               {...commonDraggerProps}
@@ -75,11 +75,9 @@ export const FileUpload: React.FC<FileUploadProps> = ({ onGenerate, loading }) =
         </Col>
       </Row>
 
-      {/* Espaço visual fixo antes da ação */}
-      <Divider style={{ margin: '32px 0' }} />
+      <Divider style={{ margin: '24px 0' }} />
 
-      {/* Área de ação isolada */}
-      <div style={{ display: 'flex', justifyContent: 'flex-end' }}>
+      <div style={{ display: 'flex', justifyContent: 'center', width: '100%' }}>
         <Button
           type="primary"
           icon={<RocketOutlined />}
@@ -87,6 +85,8 @@ export const FileUpload: React.FC<FileUploadProps> = ({ onGenerate, loading }) =
           loading={loading}
           disabled={mlFileList.length === 0 || baseFileList.length === 0}
           size="large"
+          block
+          style={{ maxWidth: '400px' }}
         >
           Gerar Dashboard
         </Button>

@@ -36,18 +36,31 @@ const App: React.FC = () => (
       <Header 
         style={{ 
           background: darkThemeConfig.token.colorBgContainer, 
-          padding: '0 24px', 
-          borderBottom: '1px solid #303030'
+          padding: '0 16px', 
+          borderBottom: '1px solid #303030',
+          position: 'sticky',
+          top: 0,
+          zIndex: 1000,
         }}
       >
-        <div style={{ fontSize: '20px', fontWeight: 'bold', color: 'white' }}>
-          Analisador de Planilhas
+        <div style={{ 
+          fontSize: 'clamp(16px, 4vw, 20px)', 
+          fontWeight: 'bold', 
+          color: 'white',
+          textAlign: 'center'
+        }}>
+          📊 Analisador de Planilhas
         </div>
       </Header>
       <Layout>
         <DashboardPage />
       </Layout>
-      <Footer style={{ textAlign: 'center', background: darkThemeConfig.token.colorBgLayout }}>
+      <Footer style={{ 
+        textAlign: 'center', 
+        background: darkThemeConfig.token.colorBgLayout,
+        padding: '16px',
+        fontSize: '0.85rem'
+      }}>
         Analisador de Planilhas ©{new Date().getFullYear()}
       </Footer>
     </Layout>

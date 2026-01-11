@@ -20,12 +20,12 @@ export const StatusFilter: React.FC<StatusFilterProps> = ({
   };
 
   return (
-    <Space>
-      <Text strong>Filtrar por Status:</Text>
+    <Space wrap>
+      <Text strong style={{ fontSize: 'clamp(12px, 2vw, 14px)' }}>Filtrar por Status:</Text>
       <Select
         placeholder="Todos"
         allowClear
-        style={{ width: 200 }}
+        style={{ width: '100%', minWidth: 150, maxWidth: 200 }}
         onChange={handleChange}
         disabled={disabled || statusOptions.length === 0}
       >

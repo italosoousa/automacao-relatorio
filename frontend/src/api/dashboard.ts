@@ -1,7 +1,8 @@
 // /frontend/src/api/dashboard.ts
 import axios from "axios";
 
-const API_BASE_URL = "http://127.0.0.1:8000"; // URL do backend FastAPI
+// Usa variável de ambiente ou fallback para desenvolvimento local
+const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || "http://127.0.0.1:8000";
 
 export interface DashboardRow {
   // Campos existentes

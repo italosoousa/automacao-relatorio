@@ -1,6 +1,18 @@
 // /frontend/src/components/ProductDetailsModal.tsx
 import React, { useMemo } from 'react';
-import { Modal, Descriptions, Tag, Typography, Divider } from 'antd';
+import { Modal, Descriptions, Tag, Typography, Divider, Card, Row, Col, Statistic, Space } from 'antd';
+import {
+  ShoppingOutlined,
+  DollarOutlined,
+  CalendarOutlined,
+  TagOutlined,
+  FileTextOutlined,
+  PercentageOutlined,
+  CheckCircleOutlined,
+  CloseCircleOutlined,
+  ExclamationCircleOutlined,
+  ClockCircleOutlined,
+} from '@ant-design/icons';
 import { DashboardRow } from '../api/dashboard';
 
 interface ProductDetailsModalProps {
@@ -9,7 +21,7 @@ interface ProductDetailsModalProps {
   data: DashboardRow | null;
 }
 
-const { Text } = Typography;
+const { Text, Title } = Typography;
 
 // Helper: moeda
 const formatCurrency = (value: number | null | undefined) => {
@@ -17,20 +29,27 @@ const formatCurrency = (value: number | null | undefined) => {
   return value.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' });
 };
 
+// Helper: percentual
+const formatPercent = (value: number | null | undefined) => {
+  if (value === null || typeof value === 'undefined') return 'N/A';
+  return `${value.toFixed(2)}%`;
+};
+
 // Helper: data
-// Sua API às vezes manda "23 de dezembro de 2025 11:51 hs."
-// Isso NÃO é ISO e o Date() não garante parsing.
-// Aqui a gente tenta converter; se não der, mostra o texto original.
 const formatSaleDate = (raw: string | null | undefined) => {
   if (!raw) return 'N/A';
 
-  // tenta parse padrão (quando for ISO ou algo compatível)
   const parsed = new Date(raw);
   if (!Number.isNaN(parsed.getTime())) {
-    return parsed.toLocaleString('pt-BR');
+    return parsed.toLocaleString('pt-BR', {
+      day: '2-digit',
+      month: '2-digit',
+      year: 'numeric',
+      hour: '2-digit',
+      minute: '2-digit',
+    });
   }
 
-  // fallback: mostra o texto “humano” como veio
   return raw;
 };
 
@@ -45,6 +64,33 @@ const statusColor = (status: string) => {
   return 'blue';
 };
 
+const getStatusGroupConfig = (statusGroup: string) => {
+  const configs: Record<string, { color: string; icon: React.ReactNode; label: string }> = {
+    ENVIADO: {
+      color: '#1890ff',
+      icon: <CheckCircleOutlined />,
+      label: 'Enviado',
+    },
+    A_ENVIAR: {
+      color: '#13c2c2',
+      icon: <ClockCircleOutlined />,
+      label: 'A Enviar',
+    },
+    MEDIACAO: {
+      color: '#fa8c16',
+      icon: <ExclamationCircleOutlined />,
+      label: 'Mediação',
+    },
+    CANCELADO: {
+      color: '#f5222d',
+      icon: <CloseCircleOutlined />,
+      label: 'Cancelado',
+    },
+  };
+
+  return configs[statusGroup] || { color: '#595959', icon: <TagOutlined />, label: statusGroup };
+};
+
 export const ProductDetailsModal: React.FC<ProductDetailsModalProps> = ({ open, onClose, data }) => {
   if (!data) return null;
 
@@ -54,84 +100,230 @@ export const ProductDetailsModal: React.FC<ProductDetailsModalProps> = ({ open, 
     return <Tag color={statusColor(text)}>{text}</Tag>;
   }, [data.status_description]);
 
+  const statusGroupConfig = getStatusGroupConfig(data.status_group);
+
+  // Cálculos adicionais
+  const marginPercent = useMemo(() => {
+    if (data.total === null || data.total === 0 || data.lucro_bruto === null) return null;
+    return (data.lucro_bruto / data.total) * 100;
+  }, [data.total, data.lucro_bruto]);
+
+  const roiPercent = useMemo(() => {
+    if (data.cost === null || data.cost === 0 || data.lucro_bruto === null) return null;
+    return (data.lucro_bruto / data.cost) * 100;
+  }, [data.cost, data.lucro_bruto]);
+
+  const totalFees = useMemo(() => {
+    const fees = (data.fee_taxes ?? 0) + (data.shipping_fees ?? 0);
+    return fees > 0 ? fees : null;
+  }, [data.fee_taxes, data.shipping_fees]);
+
+  const netRevenue = useMemo(() => {
+    if (data.revenue_product === null) return null;
+    return data.revenue_product - (totalFees ?? 0);
+  }, [data.revenue_product, totalFees]);
+
   return (
     <Modal
-      title="Detalhes da Venda"
+      title={
+        <Space>
+          <ShoppingOutlined />
+          <span>Detalhes do Produto</span>
+        </Space>
+      }
       open={open}
       onCancel={onClose}
       footer={null}
-      width={860}
+      width="95%"
+      style={{ maxWidth: 900 }}
     >
-      <Descriptions bordered column={2} size="middle" style={{ marginBottom: 16 }}>
-        {/* SKU + Anúncio */}
-        <Descriptions.Item label="SKU" span={2}>
-          <Text strong copyable>
-            {data.sku || 'N/A'}
-          </Text>
-        </Descriptions.Item>
+      <Space direction="vertical" size="large" style={{ width: '100%' }}>
+        {/* Informações Básicas */}
+        <Card size="small" title={
+          <Space>
+            <FileTextOutlined />
+            <span>Informações Básicas</span>
+          </Space>
+        }>
+          <Descriptions bordered column={2} size="small">
+            <Descriptions.Item label="SKU" span={1}>
+              <Text strong copyable style={{ fontSize: '1.1rem' }}>
+                {data.sku || 'N/A'}
+              </Text>
+            </Descriptions.Item>
 
-        <Descriptions.Item label="Descrição" span={2}>
-          {data.descricao || 'N/A'}
-        </Descriptions.Item>
-      </Descriptions>
+            <Descriptions.Item label="Status" span={1}>
+              <Tag
+                color={statusGroupConfig.color}
+                icon={statusGroupConfig.icon}
+                style={{ fontSize: '0.9rem', padding: '4px 12px' }}
+              >
+                {statusGroupConfig.label}
+              </Tag>
+            </Descriptions.Item>
 
-      <Divider style={{ margin: '12px 0' }} />
+            <Descriptions.Item label="Descrição" span={2}>
+              <Text>{data.descricao || 'N/A'}</Text>
+            </Descriptions.Item>
 
-      {/* ✅ As 3 colunas removidas do dashboard agora ficam aqui no card */}
-      <Descriptions bordered column={2} size="middle" style={{ marginBottom: 16 }}>
-        <Descriptions.Item label="Nº da Venda">
-          <Text copyable>{data.sale_number || 'N/A'}</Text>
-        </Descriptions.Item>
+            <Descriptions.Item label="Estado">
+              <Tag>{data.estado || 'Indefinido'}</Tag>
+            </Descriptions.Item>
 
-        <Descriptions.Item label="Data da Venda">
-          <Text>{formatSaleDate(data.sale_date)}</Text>
-        </Descriptions.Item>
+            <Descriptions.Item label="Status Detalhado">
+              {saleStatusTag}
+            </Descriptions.Item>
+          </Descriptions>
+        </Card>
 
-        <Descriptions.Item label="Status da Venda" span={2}>
-          {saleStatusTag}
-        </Descriptions.Item>
-      </Descriptions>
+        {/* Informações da Venda */}
+        <Card size="small" title={
+          <Space>
+            <CalendarOutlined />
+            <span>Informações da Venda</span>
+          </Space>
+        }>
+          <Descriptions bordered column={2} size="small">
+            <Descriptions.Item label="Nº da Venda">
+              <Text copyable strong>{data.sale_number || 'N/A'}</Text>
+            </Descriptions.Item>
 
-      <Divider style={{ margin: '12px 0' }} />
+            <Descriptions.Item label="Data da Venda">
+              <Space>
+                <CalendarOutlined />
+                <Text>{formatSaleDate(data.sale_date)}</Text>
+              </Space>
+            </Descriptions.Item>
 
-      {/* Financeiro */}
-      <Descriptions bordered column={2} size="middle">
-        <Descriptions.Item label="Custo do Produto">
-          {data.cost === null ? (
-            <Tag color="orange">Não cadastrado</Tag>
-          ) : (
-            <Text strong style={{ color: '#cf1322' }}>
-              {formatCurrency(data.cost)}
-            </Text>
-          )}
-        </Descriptions.Item>
+            <Descriptions.Item label="ID do Anúncio (ML)" span={2}>
+              <Text copyable>{data.ml_listing_id || 'N/A'}</Text>
+            </Descriptions.Item>
+          </Descriptions>
+        </Card>
 
-        <Descriptions.Item label="Lucro Bruto">
-          <Text strong style={{ color: (data.lucro_bruto ?? 0) > 0 ? '#3f8600' : '#cf1322' }}>
-            {formatCurrency(data.lucro_bruto)}
-          </Text>
-        </Descriptions.Item>
+        {/* Resumo Financeiro */}
+        <Card size="small" title={
+          <Space>
+            <DollarOutlined />
+            <span>Resumo Financeiro</span>
+          </Space>
+        }>
+          <Row gutter={[16, 16]}>
+            <Col xs={24} sm={12} lg={8}>
+              <Statistic
+                title="Lucro Bruto"
+                value={data.lucro_bruto ?? 0}
+                precision={2}
+                prefix="R$"
+                valueStyle={{
+                  color: (data.lucro_bruto ?? 0) >= 0 ? '#3f8600' : '#cf1322',
+                  fontSize: '1.5rem',
+                  fontWeight: 600,
+                }}
+              />
+            </Col>
+            <Col xs={24} sm={12} lg={8}>
+              <Statistic
+                title="Margem de Lucro"
+                value={marginPercent ?? 0}
+                precision={2}
+                suffix="%"
+                valueStyle={{
+                  color: (marginPercent ?? 0) >= 0 ? '#3f8600' : '#cf1322',
+                  fontSize: '1.5rem',
+                }}
+              />
+            </Col>
+            <Col xs={24} sm={12} lg={8}>
+              <Statistic
+                title="ROI (Retorno sobre Investimento)"
+                value={roiPercent ?? 0}
+                precision={2}
+                suffix="%"
+                valueStyle={{
+                  color: (roiPercent ?? 0) >= 0 ? '#3f8600' : '#cf1322',
+                  fontSize: '1.5rem',
+                }}
+              />
+            </Col>
+          </Row>
+        </Card>
 
-        <Descriptions.Item label="Receita (Produto)">
-          {formatCurrency(data.revenue_product)}
-        </Descriptions.Item>
+        {/* Detalhes Financeiros */}
+        <Card size="small" title={
+          <Space>
+            <DollarOutlined />
+            <span>Detalhes Financeiros</span>
+          </Space>
+        }>
+          <Descriptions bordered column={2} size="small">
+            <Descriptions.Item label="Receita do Produto">
+              <Text strong style={{ color: '#3f8600', fontSize: '1rem' }}>
+                {formatCurrency(data.revenue_product)}
+              </Text>
+            </Descriptions.Item>
 
-        <Descriptions.Item label="Tarifas e Impostos">
-          {formatCurrency(data.fee_taxes)}
-        </Descriptions.Item>
+            <Descriptions.Item label="Total Recebido (ML)">
+              <Text strong style={{ fontSize: '1rem' }}>
+                {formatCurrency(data.total)}
+              </Text>
+            </Descriptions.Item>
 
-        <Descriptions.Item label="Tarifas de Envio">
-          {formatCurrency(data.shipping_fees)}
-        </Descriptions.Item>
+            <Descriptions.Item label="Custo do Produto">
+              {data.cost === null ? (
+                <Tag color="orange" icon={<ExclamationCircleOutlined />}>
+                  Não cadastrado
+                </Tag>
+              ) : (
+                <Text strong style={{ color: '#cf1322', fontSize: '1rem' }}>
+                  {formatCurrency(data.cost)}
+                </Text>
+              )}
+            </Descriptions.Item>
 
-        <Descriptions.Item label="Total Recebido">
-          <Text strong>{formatCurrency(data.total)}</Text>
-        </Descriptions.Item>
+            <Descriptions.Item label="Receita Líquida">
+              {netRevenue !== null ? (
+                <Text style={{ fontSize: '1rem' }}>
+                  {formatCurrency(netRevenue)}
+                </Text>
+              ) : (
+                <Text type="secondary">N/A</Text>
+              )}
+            </Descriptions.Item>
 
-        <Descriptions.Item label="ID do Anúncio ML" span={2}>
-          <Text copyable>{data.ml_listing_id || 'N/A'}</Text>
-        </Descriptions.Item>
-      </Descriptions>
+            <Descriptions.Item label="Tarifas e Impostos">
+              <Text style={{ color: '#cf1322' }}>
+                {formatCurrency(data.fee_taxes)}
+              </Text>
+            </Descriptions.Item>
+
+            <Descriptions.Item label="Tarifas de Envio">
+              <Text style={{ color: '#cf1322' }}>
+                {formatCurrency(data.shipping_fees)}
+              </Text>
+            </Descriptions.Item>
+
+            <Descriptions.Item label="Total de Taxas" span={2}>
+              <Text strong style={{ color: '#cf1322', fontSize: '1rem' }}>
+                {formatCurrency(totalFees)}
+              </Text>
+            </Descriptions.Item>
+          </Descriptions>
+        </Card>
+
+        {/* Informações Adicionais */}
+        {data.lucro_bruto === null && (
+          <Card size="small" type="warning">
+            <Space>
+              <ExclamationCircleOutlined style={{ color: '#faad14' }} />
+              <Text type="warning">
+                <strong>Atenção:</strong> Este produto não possui custo cadastrado na base de dados.
+                O lucro bruto não pôde ser calculado.
+              </Text>
+            </Space>
+          </Card>
+        )}
+      </Space>
     </Modal>
   );
 };

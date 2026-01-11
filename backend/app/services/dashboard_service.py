@@ -3,19 +3,41 @@ from app.utils.parsing import norm_sku, to_float, safe_str
 
 
 def classify_status_group(estado: str | None, status_desc: str | None) -> str:
+    """
+    Classifica o status do produto em grupos.
+    Ordem de verificação é importante: casos mais específicos primeiro.
+    """
     text = f"{estado or ''} {status_desc or ''}".lower()
-
-    if "cancel" in text or "reembolso" in text or "reembols" in text:
-        return "CANCELADO"
-    if "media" in text or "reclama" in text or "disputa" in text:
+    
+    # 1. MEDIACAO: mediações, reclamações e disputas
+    # Verifica ANTES de cancelado para evitar que mediações sejam classificadas como canceladas
+    # Exemplos: "em mediação", "reclamação", "disputa", "mediação aberta"
+    mediacao_keywords = ["media", "reclama", "disputa", "mediacao", "mediação"]
+    if any(keyword in text for keyword in mediacao_keywords):
         return "MEDIACAO"
-    # “chegou”, “entregue”, “enviado” etc.
-    if "chegou" in text or "entreg" in text or "enviad" in text:
+    
+    # 2. CANCELADO: cancelamentos, reembolsos e devoluções
+    # Verifica devoluções ANTES de "entregue/enviado" para evitar falsos positivos
+    # Exemplos: "devolvido", "devolução", "retorno", "reembolso", "cancelado"
+    cancel_keywords = [
+        "cancel", "reembolso", "reembols", "devolv", "devolução", 
+        "devolvido", "devolvida", "retorn", "retorno", "troca",
+        "estorn", "estorno", "devol", "devolucao"
+    ]
+    if any(keyword in text for keyword in cancel_keywords):
+        return "CANCELADO"
+    
+    # 3. ENVIADO: produtos entregues/enviados (mas não devolvidos)
+    # IMPORTANTE: Esta verificação vem DEPOIS de devoluções para evitar
+    # classificar devoluções como "enviado" quando contêm palavras como "entregue"
+    if any(keyword in text for keyword in ["chegou", "entreg", "enviad"]):
         return "ENVIADO"
-    # “para enviar”, “informar nfe”, “imprimir etiqueta”, etc.
-    if "para enviar" in text or "informar" in text or "imprimir" in text:
+    
+    # 4. A_ENVIAR: pendências de envio
+    if any(keyword in text for keyword in ["para enviar", "informar", "imprimir"]):
         return "A_ENVIAR"
 
+    # Default: assume que está pendente de envio
     return "A_ENVIAR"
 
 
@@ -78,13 +100,16 @@ def build_dashboard(ml_bytes: bytes, base_bytes: bytes) -> dict:
 
         cost = to_float(r.get("__cost"))
 
-        # Regra do lucro:
-        # você comentou “valor da venda do produto - valor de custo”
-        # Então vamos usar revenue_product como base principal.
-        # Se revenue_product vier vazio, cai pro total.
-        lucro_bruto = (total - cost) if (total is not None and cost is not None) else None
-
+        # Classifica o status primeiro
         status_group = classify_status_group(estado, status_desc)
+
+        # Regra do lucro:
+        # Produtos com status MEDIACAO ou CANCELADO devem ter lucro_bruto como None
+        # Para os demais: valor da venda do produto - valor de custo
+        if status_group in ["MEDIACAO", "CANCELADO"]:
+            lucro_bruto = None
+        else:
+            lucro_bruto = (total - cost) if (total is not None and cost is not None) else None
 
         row = {
             "sku": sku,
@@ -118,9 +143,11 @@ def build_dashboard(ml_bytes: bytes, base_bytes: bytes) -> dict:
     total_itens = len(rows)
     skus_sem_cadastro = len(missing_skus)
 
+    # Calcula o lucro total apenas para produtos que não são MEDIACAO ou CANCELADO
     total_lucro = 0.0
     for x in rows:
-        if x["lucro_bruto"] is not None:
+        # Só inclui no cálculo se lucro_bruto não for None e não for MEDIACAO ou CANCELADO
+        if x["lucro_bruto"] is not None and x["status_group"] not in ["MEDIACAO", "CANCELADO"]:
             total_lucro += float(x["lucro_bruto"])
 
     # 8) Filter options (listas únicas e ordenadas)

@@ -22,15 +22,15 @@ export const OriginalStateFilter: React.FC<OriginalStateFilterProps> = ({
   };
 
   return (
-    <Space>
-      <Text strong>Filtrar por Estado:</Text>
+    <Space wrap>
+      <Text strong style={{ fontSize: 'clamp(12px, 2vw, 14px)' }}>Filtrar por Estado:</Text>
       <Select
         placeholder="Todos"
         allowClear
-        style={{ width: 200 }}
+        style={{ width: '100%', minWidth: 150, maxWidth: 200 }}
         onChange={handleChange}
         disabled={disabled || stateOptions.length === 0}
-        value={value} // Controla o valor do Select
+        value={value}
       >
         {stateOptions.map((state) => (
           <Select.Option key={state} value={state}>

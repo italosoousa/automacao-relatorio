@@ -22,9 +22,10 @@ cd backend
 # No Windows:
 python -m venv venv
 venv\\Scripts\\activate
+
 # No macOS/Linux:
-# python3 -m venv venv
-# source venv/bin/activate
+python3 -m venv venv
+source venv/bin/activate
 
 # Instale as dependências
 pip install -r requirements.txt

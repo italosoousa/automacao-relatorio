@@ -1,6 +1,6 @@
 // /frontend/src/pages/DashboardPage.tsx
 import React, { useState, useMemo } from 'react';
-import { Layout, Typography, Alert, Spin, Result, Space, Input } from 'antd';
+import { Layout, Typography, Alert, Spin, Result, Space, Input, Divider, Card } from 'antd';
 
 import { FileUpload } from '../components/FileUpload';
 import { getDashboardPreview, DashboardResponse, DashboardRow } from '../api/dashboard';
@@ -10,6 +10,10 @@ import { OriginalStateFilter } from '../components/OriginalStateFilter';
 import { DashboardTable } from '../components/DashboardTable';
 import { MissingSkusDrawer } from '../components/MissingSkusDrawer';
 import { ProductDetailsModal } from '../components/ProductDetailsModal';
+import { ExportButton } from '../components/ExportButton';
+import { ProfitRangeFilter } from '../components/ProfitRangeFilter';
+import { StatusStatistics } from '../components/StatusStatistics';
+import { QuickActions } from '../components/QuickActions';
 
 const { Content } = Layout;
 const { Title, Text } = Typography;
@@ -30,6 +34,10 @@ export const DashboardPage: React.FC = () => {
 
   // --- Barra de pesquisa ---
   const [searchTerm, setSearchTerm] = useState<string>('');
+  
+  // --- Filtro de faixa de lucro ---
+  const [minProfit, setMinProfit] = useState<number | null>(null);
+  const [maxProfit, setMaxProfit] = useState<number | null>(null);
 
   const handleGenerate = async (mlFile: File, baseFile: File) => {
     setLoading(true);
@@ -40,6 +48,8 @@ export const DashboardPage: React.FC = () => {
     setSelectedStatusGroup(null);
     setSelectedOriginalState(null);
     setSearchTerm('');
+    setMinProfit(null);
+    setMaxProfit(null);
 
     try {
       const data = await getDashboardPreview(mlFile, baseFile);
@@ -88,18 +98,35 @@ export const DashboardPage: React.FC = () => {
   // 4) Busca textual (SKU, Nº da venda, Descrição) aplicada por último
   const searchedRows = useMemo(() => {
     const term = searchTerm.trim().toLowerCase();
-    if (!term) return finalFilteredRows;
+    let filtered = finalFilteredRows;
 
-    return finalFilteredRows.filter((row) => {
-      const sku = (row.sku ?? '').toString().toLowerCase();
-      const saleNumber = (row.sale_number ?? '').toString().toLowerCase();
-      const desc = (row.descricao ?? '').toString().toLowerCase();
+    if (term) {
+      filtered = filtered.filter((row) => {
+        const sku = (row.sku ?? '').toString().toLowerCase();
+        const saleNumber = (row.sale_number ?? '').toString().toLowerCase();
+        const desc = (row.descricao ?? '').toString().toLowerCase();
 
-      return sku.includes(term) || saleNumber.includes(term) || desc.includes(term);
-    });
-  }, [finalFilteredRows, searchTerm]);
+        return sku.includes(term) || saleNumber.includes(term) || desc.includes(term);
+      });
+    }
 
-  // 5) Lucro e quantidade filtrados (baseado no resultado final)
+    // 5) Filtro por faixa de lucro
+    if (minProfit !== null || maxProfit !== null) {
+      filtered = filtered.filter((row) => {
+        const profit = row.lucro_bruto;
+        if (profit === null) return false;
+        
+        const meetsMin = minProfit === null || profit >= minProfit;
+        const meetsMax = maxProfit === null || profit <= maxProfit;
+        
+        return meetsMin && meetsMax;
+      });
+    }
+
+    return filtered;
+  }, [finalFilteredRows, searchTerm, minProfit, maxProfit]);
+
+  // 6) Lucro e quantidade filtrados (baseado no resultado final)
   const filteredProfit = useMemo(() => {
     if (!searchedRows.length) return undefined;
     return searchedRows.reduce((acc, row) => acc + (row.lucro_bruto ?? 0), 0);
@@ -116,14 +143,40 @@ export const DashboardPage: React.FC = () => {
   const handleOpenDrawer = () => setIsDrawerOpen(true);
   const handleCloseDrawer = () => setIsDrawerOpen(false);
 
-  const hasAnyFilter = !!selectedStatusGroup || !!selectedOriginalState || !!searchTerm.trim();
+  const handleClearFilters = () => {
+    setSelectedStatusGroup(null);
+    setSelectedOriginalState(null);
+    setSearchTerm('');
+    setMinProfit(null);
+    setMaxProfit(null);
+  };
+
+  const handleReset = () => {
+    setDashboardData(null);
+    handleClearFilters();
+  };
+
+  const hasAnyFilter = !!selectedStatusGroup || !!selectedOriginalState || !!searchTerm.trim() || minProfit !== null || maxProfit !== null;
 
   return (
-    <Content style={{ padding: '24px 48px' }}>
+    <Content style={{ padding: '16px', maxWidth: '100%', overflowX: 'auto' }}>
       <Space direction="vertical" size="large" style={{ width: '100%' }}>
-        <Title level={2} style={{ margin: 0 }}>
-          Dashboard de Análise de Lucro
-        </Title>
+        <div style={{ 
+          display: 'flex', 
+          justifyContent: 'space-between', 
+          alignItems: 'center', 
+          flexWrap: 'wrap', 
+          gap: 16 
+        }}>
+          <Title level={2} style={{ margin: 0, fontSize: 'clamp(1.2rem, 4vw, 1.75rem)' }}>
+            📊 Dashboard de Análise de Lucro
+          </Title>
+          {dashboardData && (
+            <Text type="secondary" style={{ fontSize: 'clamp(0.75rem, 2vw, 0.9rem)' }}>
+              Última atualização: {new Date().toLocaleString('pt-BR')}
+            </Text>
+          )}
+        </div>
 
         <FileUpload onGenerate={handleGenerate} loading={loading} />
 
@@ -158,29 +211,77 @@ export const DashboardPage: React.FC = () => {
               onMissingSkusClick={handleOpenDrawer}
             />
 
-            {/* Barra de pesquisa */}
-            <Input.Search
-              placeholder="Buscar por SKU, número da venda ou descrição..."
-              allowClear
-              value={searchTerm}
-              onChange={(e) => setSearchTerm(e.target.value)}
-              style={{ maxWidth: 520 }}
-            />
+            <StatusStatistics data={dashboardData.rows} />
 
-            <Space wrap>
-              <StatusFilter
-                statusOptions={dashboardData.filter_options.status_group}
-                onFilterChange={handleStatusGroupChange}
-                disabled={loading}
-              />
+            <Card 
+              title="Filtros e Ações" 
+              extra={
+                <Space wrap style={{ marginTop: '8px' }}>
+                  <QuickActions
+                    onClearFilters={handleClearFilters}
+                    onReset={handleReset}
+                    hasFilters={hasAnyFilter}
+                    hasData={!!dashboardData}
+                  />
+                  <ExportButton
+                    data={searchedRows}
+                    filename={`dashboard-${new Date().toISOString().split('T')[0]}`}
+                  />
+                </Space>
+              }
+            >
+              <Space direction="vertical" size="middle" style={{ width: '100%' }}>
+                <Input.Search
+                  placeholder="Buscar por SKU, número da venda ou descrição..."
+                  allowClear
+                  value={searchTerm}
+                  onChange={(e) => setSearchTerm(e.target.value)}
+                  style={{ width: '100%' }}
+                  size="large"
+                />
 
-              <OriginalStateFilter
-                stateOptions={availableOriginalStates}
-                onFilterChange={setSelectedOriginalState}
-                disabled={loading || !selectedStatusGroup}
-                value={selectedOriginalState}
+                <Space wrap style={{ width: '100%' }}>
+                  <StatusFilter
+                    statusOptions={dashboardData.filter_options.status_group}
+                    onFilterChange={handleStatusGroupChange}
+                    disabled={loading}
+                  />
+
+                  <OriginalStateFilter
+                    stateOptions={availableOriginalStates}
+                    onFilterChange={setSelectedOriginalState}
+                    disabled={loading || !selectedStatusGroup}
+                    value={selectedOriginalState}
+                  />
+
+                  <ProfitRangeFilter
+                    minProfit={minProfit}
+                    maxProfit={maxProfit}
+                    onMinChange={setMinProfit}
+                    onMaxChange={setMaxProfit}
+                    disabled={loading}
+                  />
+                </Space>
+              </Space>
+            </Card>
+
+            {hasAnyFilter && (
+              <Alert
+                message={`Mostrando ${searchedRows.length} de ${dashboardData.rows.length} itens`}
+                type="info"
+                showIcon
+                closable
+                onClose={handleClearFilters}
+                action={
+                  <QuickActions
+                    onClearFilters={handleClearFilters}
+                    onReset={handleReset}
+                    hasFilters={hasAnyFilter}
+                    hasData={!!dashboardData}
+                  />
+                }
               />
-            </Space>
+            )}
 
             <DashboardTable
               data={searchedRows}

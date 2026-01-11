@@ -274,8 +274,10 @@ export const DashboardTable: React.FC<{
         pageSize: 20,
         showSizeChanger: true,
         pageSizeOptions: ['10', '20', '50', '100'],
+        showTotal: (total, range) => `${range[0]}-${range[1]} de ${total} itens`,
+        responsive: true,
       }}
-      scroll={{ x: 1700 }}
+      scroll={{ x: 'max-content' }}
       size="middle"
       onRow={(record) => ({
         onClick: () => onRowClick(record),
