@@ -4,6 +4,16 @@ import axios from "axios";
 // Normaliza a URL da API para garantir que sempre tenha protocolo
 const normalizeApiUrl = (url: string | undefined): string => {
   if (!url) {
+    // Em produção (Vercel), se a variável não estiver configurada, usa a URL do Railway
+    if (import.meta.env.PROD) {
+      console.warn(
+        "⚠️ VITE_API_BASE_URL não configurada! " +
+        "Configure a variável de ambiente no Vercel: https://automacao-relatorio-production.up.railway.app"
+      );
+      // Fallback para produção: URL do Railway
+      return "https://automacao-relatorio-production.up.railway.app";
+    }
+    // Em desenvolvimento, usa localhost
     return "http://127.0.0.1:8000";
   }
   
@@ -18,8 +28,13 @@ const normalizeApiUrl = (url: string | undefined): string => {
   return url;
 };
 
-// Usa variável de ambiente ou fallback para desenvolvimento local
+// Usa variável de ambiente ou fallback
 const API_BASE_URL = normalizeApiUrl(import.meta.env.VITE_API_BASE_URL);
+
+// Log da URL sendo usada (apenas em desenvolvimento)
+if (import.meta.env.DEV) {
+  console.log("🔗 API Base URL:", API_BASE_URL);
+}
 
 export interface DashboardRow {
   // Campos existentes
