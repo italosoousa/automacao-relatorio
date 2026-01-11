@@ -1,8 +1,25 @@
 // /frontend/src/api/dashboard.ts
 import axios from "axios";
 
+// Normaliza a URL da API para garantir que sempre tenha protocolo
+const normalizeApiUrl = (url: string | undefined): string => {
+  if (!url) {
+    return "http://127.0.0.1:8000";
+  }
+  
+  // Remove espaços e barras no final
+  url = url.trim().replace(/\/+$/, "");
+  
+  // Se não começar com http:// ou https://, adiciona https://
+  if (!url.match(/^https?:\/\//i)) {
+    url = `https://${url}`;
+  }
+  
+  return url;
+};
+
 // Usa variável de ambiente ou fallback para desenvolvimento local
-const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || "http://127.0.0.1:8000";
+const API_BASE_URL = normalizeApiUrl(import.meta.env.VITE_API_BASE_URL);
 
 export interface DashboardRow {
   // Campos existentes
