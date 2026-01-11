@@ -60,13 +60,22 @@ O projeto está organizado em um monorepo com duas pastas principais:
 - `/backend`: Contém a API FastAPI.
   - `/app`: Código fonte da aplicação.
     - `/services`: Lógica de negócio para processamento dos dados.
-    - `/models`: Esquemas Pydantic para validação de dados.
+    - `/schemas`: Esquemas Pydantic para validação de dados.
     - `/utils`: Funções utilitárias.
     - `main.py`: Arquivo principal da API com os endpoints.
   - `requirements.txt`: Dependências Python.
+  - `Procfile`: Configuração para deploy (Railway/Heroku).
+  - `railway.json`: Configuração específica para Railway.
 - `/frontend`: Contém a aplicação React.
   - `/src`: Código fonte da aplicação.
     - `/api`: Funções para comunicação com o backend.
     - `/components`: Componentes React reutilizáveis.
     - `/pages`: Componentes de página.
   - `package.json`: Dependências e scripts do Node.js.
+  - `vercel.json`: Configuração para deploy no Vercel.
+
+## 🚀 Deploy em ProduçãoPara fazer deploy do sistema em produção, consulte:
+
+- **[DEPLOY_RAILWAY_VERCEL.md](./DEPLOY_RAILWAY_VERCEL.md)** - Guia completo para deploy no Railway (backend) + Vercel (frontend)
+- **[DEPLOY.md](./DEPLOY.md)** - Guia geral com outras opções de deploy
+- **[README_DEPLOY.md](./README_DEPLOY.md)** - Resumo rápido do deploy
