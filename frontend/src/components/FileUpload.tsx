@@ -7,25 +7,34 @@ import type { UploadFile, UploadProps } from 'antd/es/upload/interface';
 const { Dragger } = Upload;
 
 interface FileUploadProps {
-  onGenerate: (mlFile: File, baseFile: File) => void;
+  onGenerate: (file1: File, file2: File) => void;
   loading: boolean;
+  file1Label?: string;
+  file2Label?: string;
+  buttonText?: string;
 }
 
-export const FileUpload: React.FC<FileUploadProps> = ({ onGenerate, loading }) => {
-  const [mlFileList, setMlFileList] = useState<UploadFile[]>([]);
-  const [baseFileList, setBaseFileList] = useState<UploadFile[]>([]);
+export const FileUpload: React.FC<FileUploadProps> = ({ 
+  onGenerate, 
+  loading,
+  file1Label = "Planilha 1",
+  file2Label = "Planilha 2",
+  buttonText = "Gerar Relatório"
+}) => {
+  const [file1List, setFile1List] = useState<UploadFile[]>([]);
+  const [file2List, setFile2List] = useState<UploadFile[]>([]);
 
   const handleGenerateClick = () => {
-    if (mlFileList.length === 0 || baseFileList.length === 0) {
-      message.error('Por favor, selecione ambos os arquivos antes de gerar o dashboard.');
+    if (file1List.length === 0 || file2List.length === 0) {
+      message.error('Por favor, selecione ambos os arquivos antes de gerar o relatório.');
       return;
     }
 
-    const mlFile = mlFileList[0]?.originFileObj as File;
-    const baseFile = baseFileList[0]?.originFileObj as File;
+    const file1 = file1List[0]?.originFileObj as File;
+    const file2 = file2List[0]?.originFileObj as File;
 
-    if (mlFile && baseFile) {
-      onGenerate(mlFile, baseFile);
+    if (file1 && file2) {
+      onGenerate(file1, file2);
     }
   };
 
@@ -46,13 +55,13 @@ export const FileUpload: React.FC<FileUploadProps> = ({ onGenerate, loading }) =
           <div style={{ marginBottom: 16 }}>
             <Dragger
               {...commonDraggerProps}
-              onChange={({ fileList }) => setMlFileList(fileList.slice(-1))}
-              fileList={mlFileList}
+              onChange={({ fileList }) => setFile1List(fileList.slice(-1))}
+              fileList={file1List}
             >
               <p className="ant-upload-drag-icon">
                 <InboxOutlined />
               </p>
-              <p className="ant-upload-text">Planilha do Mercado Livre</p>
+              <p className="ant-upload-text">{file1Label}</p>
               <p className="ant-upload-hint">Clique ou arraste o arquivo (.xlsx, .csv)</p>
             </Dragger>
           </div>
@@ -62,13 +71,13 @@ export const FileUpload: React.FC<FileUploadProps> = ({ onGenerate, loading }) =
           <div style={{ marginBottom: 16 }}>
             <Dragger
               {...commonDraggerProps}
-              onChange={({ fileList }) => setBaseFileList(fileList.slice(-1))}
-              fileList={baseFileList}
+              onChange={({ fileList }) => setFile2List(fileList.slice(-1))}
+              fileList={file2List}
             >
               <p className="ant-upload-drag-icon">
                 <InboxOutlined />
               </p>
-              <p className="ant-upload-text">Planilha Base de Produtos</p>
+              <p className="ant-upload-text">{file2Label}</p>
               <p className="ant-upload-hint">Clique ou arraste o arquivo (.xlsx, .csv)</p>
             </Dragger>
           </div>
@@ -83,12 +92,12 @@ export const FileUpload: React.FC<FileUploadProps> = ({ onGenerate, loading }) =
           icon={<RocketOutlined />}
           onClick={handleGenerateClick}
           loading={loading}
-          disabled={mlFileList.length === 0 || baseFileList.length === 0}
+          disabled={file1List.length === 0 || file2List.length === 0}
           size="large"
           block
           style={{ maxWidth: '400px' }}
         >
-          Gerar Dashboard
+          {buttonText}
         </Button>
       </div>
     </Card>

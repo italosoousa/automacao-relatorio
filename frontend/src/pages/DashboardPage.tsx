@@ -178,7 +178,13 @@ export const DashboardPage: React.FC = () => {
           )}
         </div>
 
-        <FileUpload onGenerate={handleGenerate} loading={loading} />
+        <FileUpload 
+          onGenerate={handleGenerate} 
+          loading={loading}
+          file1Label="Planilha do Mercado Livre"
+          file2Label="Planilha Base de Produtos"
+          buttonText="Gerar Dashboard"
+        />
 
         {error && (
           <Alert

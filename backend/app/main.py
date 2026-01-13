@@ -2,6 +2,8 @@ import os
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from app.api.dashboard import router as dashboard_router
+from app.api.relatorio1 import router as relatorio1_router
+from app.api.relatorio2 import router as relatorio2_router
 
 app = FastAPI(title="Automacao Relatorio API")
 
@@ -20,3 +22,5 @@ app.add_middleware(
 )
 
 app.include_router(dashboard_router)
+app.include_router(relatorio1_router)
+app.include_router(relatorio2_router)
