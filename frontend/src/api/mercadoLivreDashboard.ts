@@ -1,4 +1,4 @@
-// /frontend/src/api/dashboard.ts
+// /frontend/src/api/mercadoLivreDashboard.ts
 import axios from "axios";
 
 // Detecta se está rodando em produção (Vercel)
@@ -46,7 +46,7 @@ const API_BASE_URL = normalizeApiUrl(import.meta.env.VITE_API_BASE_URL);
 console.log("🔗 API Base URL:", API_BASE_URL);
 console.log("🌍 Ambiente:", isProduction() ? "Produção" : "Desenvolvimento");
 
-export interface DashboardRow {
+export interface MercadoLivreDashboardRow {
   // Campos existentes
   sku: string | null;
   descricao: string;
@@ -72,7 +72,7 @@ export interface MissingSkuItem {
   estado: string | null;
 }
 
-export interface DashboardSummary {
+export interface MercadoLivreDashboardSummary {
   total_lucro: number;
   total_itens: number;
   skus_sem_cadastro: number;
@@ -83,17 +83,17 @@ export interface FilterOptions {
   status_group: string[];
 }
 
-export interface DashboardResponse {
-  rows: DashboardRow[];
-  summary: DashboardSummary;
+export interface MercadoLivreDashboardResponse {
+  rows: MercadoLivreDashboardRow[];
+  summary: MercadoLivreDashboardSummary;
   filter_options: FilterOptions;
   missing_skus: MissingSkuItem[];
 }
 
-export const getDashboardPreview = async (
+export const getMercadoLivreDashboardPreview = async (
   mlFile: File,
   baseFile: File
-): Promise<DashboardResponse> => {
+): Promise<MercadoLivreDashboardResponse> => {
   const formData = new FormData();
 
   // IMPORTANTE: estes nomes precisam bater com o backend (FastAPI UploadFile params)
@@ -101,8 +101,8 @@ export const getDashboardPreview = async (
   formData.append("base_file", baseFile);
 
   try {
-    const response = await axios.post<DashboardResponse>(
-      `${API_BASE_URL}/api/dashboard/preview`,
+    const response = await axios.post<MercadoLivreDashboardResponse>(
+      `${API_BASE_URL}/api/mercado-livre-dashboard/preview`,
       formData,
       {
         // não é necessário setar Content-Type manualmente; o browser adiciona o boundary corretamente

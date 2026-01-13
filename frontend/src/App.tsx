@@ -2,9 +2,9 @@
 import React from "react";
 import { ConfigProvider, Layout, theme } from "antd";
 import { BrowserRouter, Routes, Route } from "react-router-dom";
-import { DashboardPage } from "./pages/DashboardPage";
-import { Relatorio1Page } from "./pages/Relatorio1Page";
-import { Relatorio2Page } from "./pages/Relatorio2Page";
+import { MercadoLivreDashboardPage } from "./pages/MercadoLivreDashboardPage";
+import { RfidDashboardPage } from "./pages/RfidDashboardPage";
+import { SugestaoVendasDashboardPage } from "./pages/SugestaoVendasDashboardPage";
 import { Navigation } from "./components/Navigation";
 import "./index.css";
 
@@ -120,9 +120,12 @@ const App: React.FC = () => (
         </Header>
         <Layout>
           <Routes>
-            <Route path="/" element={<DashboardPage />} />
-            <Route path="/relatorio-1" element={<Relatorio1Page />} />
-            <Route path="/relatorio-2" element={<Relatorio2Page />} />
+            <Route path="/" element={<MercadoLivreDashboardPage />} />
+            <Route path="/rfid-dashboard" element={<RfidDashboardPage />} />
+            <Route
+              path="/sugestao-vendas-dashboard"
+              element={<SugestaoVendasDashboardPage />}
+            />
           </Routes>
         </Layout>
         <Footer

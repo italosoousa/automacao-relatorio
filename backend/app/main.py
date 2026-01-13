@@ -1,9 +1,9 @@
 import os
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
-from app.api.dashboard import router as dashboard_router
-from app.api.relatorio1 import router as relatorio1_router
-from app.api.relatorio2 import router as relatorio2_router
+from app.api.mercado_livre_dashboard import router as mercado_livre_dashboard_router
+from app.api.rfid_dashboard import router as rfid_dashboard_router
+from app.api.sugestao_vendas_dashboard import router as sugestao_vendas_dashboard_router
 
 app = FastAPI(title="Automacao Relatorio API")
 
@@ -21,6 +21,6 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
-app.include_router(dashboard_router)
-app.include_router(relatorio1_router)
-app.include_router(relatorio2_router)
+app.include_router(mercado_livre_dashboard_router)
+app.include_router(rfid_dashboard_router)
+app.include_router(sugestao_vendas_dashboard_router)

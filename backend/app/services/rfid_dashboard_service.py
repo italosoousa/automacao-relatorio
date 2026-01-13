@@ -1,16 +1,16 @@
 import pandas as pd
-from app.schemas.relatorio2 import Relatorio2Response, Relatorio2Row, Relatorio2Summary
+from app.schemas.rfid_dashboard import RfidDashboardResponse, RfidDashboardRow, RfidDashboardSummary
 
 
-def build_relatorio2(file1_bytes: bytes, file2_bytes: bytes) -> dict:
+def build_rfid_dashboard(file1_bytes: bytes, file2_bytes: bytes) -> dict:
     """
-    TODO: Implementar a lógica de processamento do Relatório 2
+    TODO: Implementar a lógica de processamento do Dashboard RFID
     
     Esta função deve:
     1. Ler as duas planilhas (file1_bytes e file2_bytes)
     2. Fazer o cruzamento de dados necessário
     3. Processar e transformar os dados
-    4. Retornar um dicionário no formato esperado pelo schema Relatorio2Response
+    4. Retornar um dicionário no formato esperado pelo schema RfidDashboardResponse
     """
     
     # Exemplo básico - substituir pela lógica real

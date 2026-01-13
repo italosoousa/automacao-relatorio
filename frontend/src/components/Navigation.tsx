@@ -13,17 +13,17 @@ export const Navigation: React.FC = () => {
     {
       key: '/',
       icon: <DashboardOutlined />,
-      label: 'Dashboard',
+      label: 'Mercado Livre',
     },
     {
-      key: '/relatorio-1',
+      key: '/rfid-dashboard',
       icon: <FileTextOutlined />,
-      label: 'Relatório 1',
+      label: 'RFID',
     },
     {
-      key: '/relatorio-2',
+      key: '/sugestao-vendas-dashboard',
       icon: <BarChartOutlined />,
-      label: 'Relatório 2',
+      label: 'Sugestão Vendas',
     },
   ];
 

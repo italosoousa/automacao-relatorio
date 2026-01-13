@@ -41,7 +41,7 @@ def classify_status_group(estado: str | None, status_desc: str | None) -> str:
     return "A_ENVIAR"
 
 
-def build_dashboard(ml_bytes: bytes, base_bytes: bytes) -> dict:
+def build_mercado_livre_dashboard(ml_bytes: bytes, base_bytes: bytes) -> dict:
     # 1) Lê ML (header real na linha 6 do Excel -> header=5)
     ml = pd.read_excel(ml_bytes, header=5, engine="openpyxl")
 
@@ -120,7 +120,7 @@ def build_dashboard(ml_bytes: bytes, base_bytes: bytes) -> dict:
 
             # modal:
             "sale_number": safe_str(r.get("N.º de venda")),
-            "sale_date": safe_str(r.get("Data da venda")),  # mantém “humano”, seu modal já trata
+            "sale_date": safe_str(r.get("Data da venda")),  # mantém "humano", seu modal já trata
             "status_description": status_desc,
             "revenue_product": revenue_product,
             "fee_taxes": fee_taxes,

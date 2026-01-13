@@ -1,9 +1,9 @@
-// /frontend/src/pages/DashboardPage.tsx
+// /frontend/src/pages/MercadoLivreDashboardPage.tsx
 import React, { useState, useMemo } from 'react';
 import { Layout, Typography, Alert, Spin, Result, Space, Input, Divider, Card } from 'antd';
 
 import { FileUpload } from '../components/FileUpload';
-import { getDashboardPreview, DashboardResponse, DashboardRow } from '../api/dashboard';
+import { getMercadoLivreDashboardPreview, MercadoLivreDashboardResponse, MercadoLivreDashboardRow } from '../api/mercadoLivreDashboard';
 import { SummaryCards } from '../components/SummaryCards';
 import { StatusFilter } from '../components/StatusFilter';
 import { OriginalStateFilter } from '../components/OriginalStateFilter';
@@ -18,8 +18,8 @@ import { QuickActions } from '../components/QuickActions';
 const { Content } = Layout;
 const { Title, Text } = Typography;
 
-export const DashboardPage: React.FC = () => {
-  const [dashboardData, setDashboardData] = useState<DashboardResponse | null>(null);
+export const MercadoLivreDashboardPage: React.FC = () => {
+  const [dashboardData, setDashboardData] = useState<MercadoLivreDashboardResponse | null>(null);
   const [loading, setLoading] = useState<boolean>(false);
   const [error, setError] = useState<string | null>(null);
 
@@ -30,7 +30,7 @@ export const DashboardPage: React.FC = () => {
 
   // --- Modal de Detalhes ---
   const [isModalOpen, setIsModalOpen] = useState(false);
-  const [selectedRow, setSelectedRow] = useState<DashboardRow | null>(null);
+  const [selectedRow, setSelectedRow] = useState<MercadoLivreDashboardRow | null>(null);
 
   // --- Barra de pesquisa ---
   const [searchTerm, setSearchTerm] = useState<string>('');
@@ -52,7 +52,7 @@ export const DashboardPage: React.FC = () => {
     setMaxProfit(null);
 
     try {
-      const data = await getDashboardPreview(mlFile, baseFile);
+      const data = await getMercadoLivreDashboardPreview(mlFile, baseFile);
       setDashboardData(data);
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Ocorreu um erro desconhecido.');
@@ -62,7 +62,7 @@ export const DashboardPage: React.FC = () => {
   };
 
   // --- Handlers do Modal ---
-  const handleRowClick = (record: DashboardRow) => {
+  const handleRowClick = (record: MercadoLivreDashboardRow) => {
     setSelectedRow(record);
     setIsModalOpen(true);
   };
@@ -169,7 +169,7 @@ export const DashboardPage: React.FC = () => {
           gap: 16 
         }}>
           <Title level={2} style={{ margin: 0, fontSize: 'clamp(1.2rem, 4vw, 1.75rem)' }}>
-            📊 Dashboard de Análise de Lucro
+            📊 Dashboard Mercado Livre
           </Title>
           {dashboardData && (
             <Text type="secondary" style={{ fontSize: 'clamp(0.75rem, 2vw, 0.9rem)' }}>
@@ -231,7 +231,7 @@ export const DashboardPage: React.FC = () => {
                   />
                   <ExportButton
                     data={searchedRows}
-                    filename={`dashboard-${new Date().toISOString().split('T')[0]}`}
+                    filename={`mercado-livre-dashboard-${new Date().toISOString().split('T')[0]}`}
                   />
                 </Space>
               }

@@ -1,4 +1,4 @@
-// /frontend/src/api/relatorio2.ts
+// /frontend/src/api/sugestaoVendasDashboard.ts
 import axios from "axios";
 
 // Reutiliza a mesma lógica de detecção de URL do dashboard.ts
@@ -32,34 +32,34 @@ const normalizeApiUrl = (url: string | undefined): string => {
 const API_BASE_URL = normalizeApiUrl(import.meta.env.VITE_API_BASE_URL);
 
 // TODO: Definir os tipos conforme o schema do backend
-export interface Relatorio2Row {
+export interface SugestaoVendasDashboardRow {
   id?: string | null;
   campo1?: string | null;
   campo2?: number | null;
   // Adicionar mais campos conforme necessário
 }
 
-export interface Relatorio2Summary {
+export interface SugestaoVendasDashboardSummary {
   total_itens: number;
   // Adicionar mais campos conforme necessário
 }
 
-export interface Relatorio2Response {
-  rows: Relatorio2Row[];
-  summary: Relatorio2Summary;
+export interface SugestaoVendasDashboardResponse {
+  rows: SugestaoVendasDashboardRow[];
+  summary: SugestaoVendasDashboardSummary;
 }
 
-export const getRelatorio2Preview = async (
+export const getSugestaoVendasDashboardPreview = async (
   file1: File,
   file2: File
-): Promise<Relatorio2Response> => {
+): Promise<SugestaoVendasDashboardResponse> => {
   const formData = new FormData();
   formData.append("file1", file1);
   formData.append("file2", file2);
 
   try {
-    const response = await axios.post<Relatorio2Response>(
-      `${API_BASE_URL}/api/relatorio2/preview`,
+    const response = await axios.post<SugestaoVendasDashboardResponse>(
+      `${API_BASE_URL}/api/sugestao-vendas-dashboard/preview`,
       formData,
       {
         timeout: 120000,

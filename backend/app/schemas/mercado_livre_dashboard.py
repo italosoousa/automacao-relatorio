@@ -2,7 +2,7 @@ from pydantic import BaseModel
 from typing import List, Optional
 
 
-class DashboardRow(BaseModel):
+class MercadoLivreDashboardRow(BaseModel):
     sku: Optional[str] = None
     descricao: str
     estado: Optional[str] = None
@@ -27,7 +27,7 @@ class MissingSkuItem(BaseModel):
     estado: Optional[str] = None
 
 
-class DashboardSummary(BaseModel):
+class MercadoLivreDashboardSummary(BaseModel):
     total_lucro: float
     total_itens: int
     skus_sem_cadastro: int
@@ -38,8 +38,8 @@ class FilterOptions(BaseModel):
     status_group: List[str]
 
 
-class DashboardResponse(BaseModel):
-    rows: List[DashboardRow]
-    summary: DashboardSummary
+class MercadoLivreDashboardResponse(BaseModel):
+    rows: List[MercadoLivreDashboardRow]
+    summary: MercadoLivreDashboardSummary
     filter_options: FilterOptions
     missing_skus: List[MissingSkuItem]

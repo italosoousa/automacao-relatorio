@@ -1,12 +1,12 @@
 from fastapi import APIRouter, UploadFile, File, HTTPException
-from app.services.relatorio2_service import build_relatorio2
-from app.schemas.relatorio2 import Relatorio2Response
+from app.services.rfid_dashboard_service import build_rfid_dashboard
+from app.schemas.rfid_dashboard import RfidDashboardResponse
 
-router = APIRouter(prefix="/api/relatorio2", tags=["relatorio2"])
+router = APIRouter(prefix="/api/rfid-dashboard", tags=["rfid-dashboard"])
 
 
-@router.post("/preview", response_model=Relatorio2Response)
-async def relatorio2_preview(
+@router.post("/preview", response_model=RfidDashboardResponse)
+async def rfid_dashboard_preview(
     file1: UploadFile = File(...),
     file2: UploadFile = File(...),
 ):
@@ -14,7 +14,7 @@ async def relatorio2_preview(
         file1_bytes = await file1.read()
         file2_bytes = await file2.read()
 
-        result = build_relatorio2(file1_bytes, file2_bytes)
+        result = build_rfid_dashboard(file1_bytes, file2_bytes)
         return result
 
     except KeyError as e:

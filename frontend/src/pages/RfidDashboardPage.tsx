@@ -1,16 +1,16 @@
-// /frontend/src/pages/Relatorio1Page.tsx
+// /frontend/src/pages/RfidDashboardPage.tsx
 import React, { useState } from 'react';
 import { Layout, Typography, Alert, Spin, Result, Space } from 'antd';
 import { FileUpload } from '../components/FileUpload';
-import { getRelatorio1Preview, Relatorio1Response } from '../api/relatorio1';
+import { getRfidDashboardPreview, RfidDashboardResponse } from '../api/rfidDashboard';
 
 const { Content } = Layout;
 const { Title } = Typography;
 
-export const Relatorio1Page: React.FC = () => {
+export const RfidDashboardPage: React.FC = () => {
   const [loading, setLoading] = useState<boolean>(false);
   const [error, setError] = useState<string | null>(null);
-  const [data, setData] = useState<Relatorio1Response | null>(null);
+  const [data, setData] = useState<RfidDashboardResponse | null>(null);
 
   const handleGenerate = async (file1: File, file2: File) => {
     setLoading(true);
@@ -18,7 +18,7 @@ export const Relatorio1Page: React.FC = () => {
     setData(null);
 
     try {
-      const response = await getRelatorio1Preview(file1, file2);
+      const response = await getRfidDashboardPreview(file1, file2);
       setData(response);
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Ocorreu um erro desconhecido.');
@@ -31,7 +31,7 @@ export const Relatorio1Page: React.FC = () => {
     <Content style={{ padding: '16px', maxWidth: '100%', overflowX: 'auto' }}>
       <Space direction="vertical" size="large" style={{ width: '100%' }}>
         <Title level={2} style={{ margin: 0, fontSize: 'clamp(1.2rem, 4vw, 1.75rem)' }}>
-          📋 Relatório 1
+          📡 Dashboard RFID
         </Title>
 
         <FileUpload 
@@ -39,12 +39,12 @@ export const Relatorio1Page: React.FC = () => {
           loading={loading}
           file1Label="Planilha 1"
           file2Label="Planilha 2"
-          buttonText="Gerar Relatório 1"
+          buttonText="Gerar Dashboard RFID"
         />
 
         {error && (
           <Alert
-            message="Erro ao Gerar Relatório"
+            message="Erro ao Gerar Dashboard"
             description={error}
             type="error"
             showIcon
@@ -57,15 +57,15 @@ export const Relatorio1Page: React.FC = () => {
 
         {!loading && !error && !data && (
           <Result
-            icon={<Typography.Text style={{ fontSize: 48 }}>📋</Typography.Text>}
+            icon={<Typography.Text style={{ fontSize: 48 }}>📡</Typography.Text>}
             title="Aguardando arquivos"
-            subTitle="Por favor, faça o upload das duas planilhas e clique em 'Gerar Relatório 1' para começar."
+            subTitle="Por favor, faça o upload das duas planilhas e clique em 'Gerar Dashboard RFID' para começar."
           />
         )}
 
         {data && (
           <Alert
-            message="Relatório gerado com sucesso"
+            message="Dashboard gerado com sucesso"
             description={`Total de itens: ${data.summary.total_itens}`}
             type="success"
             showIcon

@@ -1,12 +1,12 @@
 from fastapi import APIRouter, UploadFile, File, HTTPException
-from app.services.dashboard_service import build_dashboard
-from app.schemas.dashboard import DashboardResponse
+from app.services.mercado_livre_dashboard_service import build_mercado_livre_dashboard
+from app.schemas.mercado_livre_dashboard import MercadoLivreDashboardResponse
 
-router = APIRouter(prefix="/api/dashboard", tags=["dashboard"])
+router = APIRouter(prefix="/api/mercado-livre-dashboard", tags=["mercado-livre-dashboard"])
 
 
-@router.post("/preview", response_model=DashboardResponse)
-async def dashboard_preview(
+@router.post("/preview", response_model=MercadoLivreDashboardResponse)
+async def mercado_livre_dashboard_preview(
     ml_file: UploadFile = File(...),
     base_file: UploadFile = File(...),
 ):
@@ -14,7 +14,7 @@ async def dashboard_preview(
         ml_bytes = await ml_file.read()
         base_bytes = await base_file.read()
 
-        result = build_dashboard(ml_bytes, base_bytes)
+        result = build_mercado_livre_dashboard(ml_bytes, base_bytes)
         return result
 
     except KeyError as e:

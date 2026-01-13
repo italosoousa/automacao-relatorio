@@ -1,16 +1,16 @@
 import pandas as pd
-from app.schemas.relatorio1 import Relatorio1Response, Relatorio1Row, Relatorio1Summary
+from app.schemas.sugestao_vendas_dashboard import SugestaoVendasDashboardResponse, SugestaoVendasDashboardRow, SugestaoVendasDashboardSummary
 
 
-def build_relatorio1(file1_bytes: bytes, file2_bytes: bytes) -> dict:
+def build_sugestao_vendas_dashboard(file1_bytes: bytes, file2_bytes: bytes) -> dict:
     """
-    TODO: Implementar a lógica de processamento do Relatório 1
+    TODO: Implementar a lógica de processamento do Dashboard Sugestão de Vendas
     
     Esta função deve:
     1. Ler as duas planilhas (file1_bytes e file2_bytes)
     2. Fazer o cruzamento de dados necessário
     3. Processar e transformar os dados
-    4. Retornar um dicionário no formato esperado pelo schema Relatorio1Response
+    4. Retornar um dicionário no formato esperado pelo schema SugestaoVendasDashboardResponse
     """
     
     # Exemplo básico - substituir pela lógica real
