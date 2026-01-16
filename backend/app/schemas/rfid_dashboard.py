@@ -1,22 +1,32 @@
 from pydantic import BaseModel
-from typing import List, Optional, Any, Dict
+from typing import List, Optional
 
 
-# TODO: Customizar os schemas conforme necessário para o Dashboard RFID
-class RfidDashboardRow(BaseModel):
-    # Exemplo de campos - ajustar conforme necessário
-    id: Optional[str] = None
-    campo1: Optional[str] = None
-    campo2: Optional[float] = None
-    # Adicionar mais campos conforme necessário
+class RFIDRow(BaseModel):
+    """Representa uma linha do relatório de conferência RFID vs MICROVIX."""
+    codigo_barras: str
+    descricao: Optional[str] = None
+    qtd_microvix: int
+    qtd_rfid: int
+    diferenca: int  # qtd_rfid - qtd_microvix (positivo = sobrando, negativo = faltando)
+    status: str  # OK, FALTANDO, SOBRANDO, SO_MICROVIX, SO_RFID
 
 
-class RfidDashboardSummary(BaseModel):
-    total_itens: int
-    # Adicionar mais campos de resumo conforme necessário
+class RFIDCards(BaseModel):
+    """Cards de resumo do dashboard RFID."""
+    total_itens_microvix: int  # Soma das quantidades do MICROVIX
+    total_itens_rfid: int      # Soma das quantidades do RFID
+    total_divergencias: int    # Quantidade de EANs com status != OK
+    itens_ok: int              # Quantidade de EANs com status OK
+    itens_faltando: int        # Quantidade de EANs com status FALTANDO
+    itens_sobrando: int        # Quantidade de EANs com status SOBRANDO
+    itens_so_microvix: int     # Quantidade de EANs apenas no MICROVIX
+    itens_so_rfid: int         # Quantidade de EANs apenas no RFID
 
 
-class RfidDashboardResponse(BaseModel):
-    rows: List[RfidDashboardRow]
-    summary: RfidDashboardSummary
-    # Adicionar mais campos conforme necessário
+class RFIDDashboardResponse(BaseModel):
+    """Resposta completa do endpoint de dashboard RFID."""
+    cards: RFIDCards
+    divergencias: List[RFIDRow]  # Itens com status != OK
+    ok: List[RFIDRow]            # Itens com status OK
+    all: List[RFIDRow]           # Todos os itens (útil para tabela completa e filtros)
