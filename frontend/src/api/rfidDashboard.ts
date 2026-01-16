@@ -1,7 +1,7 @@
 // /frontend/src/api/rfidDashboard.ts
 import axios from "axios";
 
-// Reutiliza a mesma lógica de detecção de URL do dashboard.ts
+// Detecta se está rodando em produção
 const isProduction = (): boolean => {
   if (typeof window === "undefined") return false;
   const hostname = window.location.hostname;
@@ -13,6 +13,7 @@ const isProduction = (): boolean => {
   );
 };
 
+// Normaliza a URL da API
 const normalizeApiUrl = (url: string | undefined): string => {
   const envUrl = url || import.meta.env.VITE_API_BASE_URL;
 
@@ -25,6 +26,7 @@ const normalizeApiUrl = (url: string | undefined): string => {
   }
 
   if (isProduction()) {
+    console.log("🔗 Usando URL padrão do Railway (produção)");
     return "https://automacao-relatorio-production.up.railway.app";
   }
 
@@ -33,40 +35,92 @@ const normalizeApiUrl = (url: string | undefined): string => {
 
 const API_BASE_URL = normalizeApiUrl(import.meta.env.VITE_API_BASE_URL);
 
-// TODO: Definir os tipos conforme o schema do backend
+console.log("🔗 RFID API Base URL:", API_BASE_URL);
+
+// =============================================================================
+// TIPOS - Conferência RFID (MICROVIX vs RFID)
+// =============================================================================
+
+/**
+ * Status possíveis da conferência RFID
+ */
+export type RfidStatus = 
+  | "OK"           // Quantidades conferem
+  | "FALTANDO"     // Faltam itens no RFID
+  | "SOBRANDO"     // Itens extras no RFID
+  | "SO_MICROVIX"  // Apenas no MICROVIX
+  | "SO_RFID";     // Apenas no RFID
+
+/**
+ * Cards de resumo do dashboard RFID
+ */
+export interface RfidDashboardCards {
+  total_itens_microvix: number;  // Soma das quantidades do MICROVIX
+  total_itens_rfid: number;      // Soma das quantidades do RFID
+  total_divergencias: number;    // Quantidade de EANs com status != OK
+  itens_ok: number;              // Quantidade de EANs com status OK
+  itens_faltando: number;        // Quantidade de EANs com status FALTANDO
+  itens_sobrando: number;        // Quantidade de EANs com status SOBRANDO
+  itens_so_microvix: number;     // Quantidade de EANs apenas no MICROVIX
+  itens_so_rfid: number;         // Quantidade de EANs apenas no RFID
+}
+
+/**
+ * Linha individual do relatório RFID
+ */
 export interface RfidDashboardRow {
-  id?: string | null;
-  campo1?: string | null;
-  campo2?: number | null;
-  // Adicionar mais campos conforme necessário
+  codigo_barras: string;
+  descricao?: string | null;
+  qtd_microvix: number;
+  qtd_rfid: number;
+  diferenca: number;  // qtd_rfid - qtd_microvix (positivo = sobrando, negativo = faltando)
+  status: RfidStatus;
 }
 
-export interface RfidDashboardSummary {
-  total_itens: number;
-  // Adicionar mais campos conforme necessário
-}
-
+/**
+ * Resposta completa do endpoint RFID
+ */
 export interface RfidDashboardResponse {
-  rows: RfidDashboardRow[];
-  summary: RfidDashboardSummary;
+  cards: RfidDashboardCards;
+  divergencias: RfidDashboardRow[];  // Itens com status != OK
+  ok: RfidDashboardRow[];            // Itens com status OK
+  all?: RfidDashboardRow[];          // Lista completa (opcional)
 }
 
+// =============================================================================
+// FUNÇÃO PRINCIPAL DE FETCH
+// =============================================================================
+
+/**
+ * Busca o dashboard de conferência RFID vs MICROVIX
+ * 
+ * @param microvixFile - Arquivo MICROVIX.xlsx
+ * @param rfidFile - Arquivo RFID.csv
+ * @returns Dashboard com cards, divergências e lista completa
+ */
 export const getRfidDashboardPreview = async (
-  file1: File,
-  file2: File
+  microvixFile: File,
+  rfidFile: File
 ): Promise<RfidDashboardResponse> => {
   const formData = new FormData();
-  formData.append("file1", file1);
-  formData.append("file2", file2);
+
+  // IMPORTANTE: Nomes devem bater com o backend (FastAPI UploadFile params)
+  formData.append("microvix_file", microvixFile);
+  formData.append("rfid_file", rfidFile);
 
   try {
     const response = await axios.post<RfidDashboardResponse>(
       `${API_BASE_URL}/api/rfid-dashboard/preview`,
       formData,
       {
-        timeout: 120000,
+        timeout: 120000, // 2 minutos (planilhas podem ser grandes)
       }
     );
+
+    // Se "all" não vier no response, monta a partir de divergencias + ok
+    if (!response.data.all) {
+      response.data.all = [...response.data.divergencias, ...response.data.ok];
+    }
 
     return response.data;
   } catch (err: unknown) {
