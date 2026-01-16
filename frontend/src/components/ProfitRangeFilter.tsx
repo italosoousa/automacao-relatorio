@@ -1,9 +1,10 @@
 // /frontend/src/components/ProfitRangeFilter.tsx
 import React from 'react';
-import { InputNumber, Space, Typography } from 'antd';
+import { InputNumber, Space, Typography, theme } from 'antd';
 import { DollarOutlined } from '@ant-design/icons';
 
 const { Text } = Typography;
+const { useToken } = theme;
 
 interface ProfitRangeFilterProps {
   minProfit: number | null;
@@ -20,9 +21,11 @@ export const ProfitRangeFilter: React.FC<ProfitRangeFilterProps> = ({
   onMaxChange,
   disabled,
 }) => {
+  const { token } = useToken();
+  
   return (
     <Space wrap style={{ width: '100%' }}>
-      <DollarOutlined style={{ color: '#1890ff' }} />
+      <DollarOutlined style={{ color: token.colorPrimary }} />
       <Text strong style={{ fontSize: 'clamp(12px, 2vw, 14px)' }}>Lucro:</Text>
       <InputNumber
         prefix="R$"

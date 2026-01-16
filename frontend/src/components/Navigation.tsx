@@ -40,14 +40,14 @@ export const Navigation: React.FC = () => {
       style={{
         background: 'transparent',
         borderBottom: 'none',
-        lineHeight: '64px',
+        lineHeight: '72px',
         fontSize: '14px',
         fontWeight: 500,
         display: 'flex',
         justifyContent: 'center',
         width: '100%',
+        fontFamily: 'var(--font-body)',
       }}
-      theme="dark"
     />
   );
 };

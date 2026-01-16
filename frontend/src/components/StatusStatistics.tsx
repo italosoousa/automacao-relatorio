@@ -1,6 +1,6 @@
 // /frontend/src/components/StatusStatistics.tsx
 import React, { useMemo } from 'react';
-import { Card, Row, Col, Statistic, Tag, Progress } from 'antd';
+import { Card, Row, Col, Statistic, Tag, Progress, theme } from 'antd';
 import { DashboardRow } from '../api/dashboard';
 import {
   CheckCircleOutlined,
@@ -8,6 +8,8 @@ import {
   ExclamationCircleOutlined,
   CloseCircleOutlined,
 } from '@ant-design/icons';
+
+const { useToken } = theme;
 
 interface StatusStatisticsProps {
   data: DashboardRow[];
@@ -17,6 +19,8 @@ const formatCurrency = (value: number) =>
   new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(value);
 
 export const StatusStatistics: React.FC<StatusStatisticsProps> = ({ data }) => {
+  const { token } = useToken();
+  
   const stats = useMemo(() => {
     const groups: Record<string, { count: number; profit: number; items: DashboardRow[] }> = {
       ENVIADO: { count: 0, profit: 0, items: [] },
@@ -46,26 +50,26 @@ export const StatusStatistics: React.FC<StatusStatisticsProps> = ({ data }) => {
     {
       key: 'ENVIADO',
       title: 'Enviados',
-      icon: <CheckCircleOutlined style={{ color: '#1890ff' }} />,
-      color: '#1890ff',
+      icon: <CheckCircleOutlined style={{ color: token.colorSuccess }} />,
+      color: token.colorSuccess,
     },
     {
       key: 'A_ENVIAR',
       title: 'A Enviar',
-      icon: <ClockCircleOutlined style={{ color: '#13c2c2' }} />,
-      color: '#13c2c2',
+      icon: <ClockCircleOutlined style={{ color: token.colorInfo }} />,
+      color: token.colorInfo,
     },
     {
       key: 'MEDIACAO',
       title: 'Mediação',
-      icon: <ExclamationCircleOutlined style={{ color: '#fa8c16' }} />,
-      color: '#fa8c16',
+      icon: <ExclamationCircleOutlined style={{ color: token.colorWarning }} />,
+      color: token.colorWarning,
     },
     {
       key: 'CANCELADO',
       title: 'Cancelados',
-      icon: <CloseCircleOutlined style={{ color: '#f5222d' }} />,
-      color: '#f5222d',
+      icon: <CloseCircleOutlined style={{ color: token.colorError }} />,
+      color: token.colorError,
     },
   ];
 

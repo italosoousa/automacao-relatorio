@@ -43,6 +43,8 @@ const ProfitCell: React.FC<{ value: number | null | undefined }> = ({ value }) =
 };
 
 const NegativeMoney: React.FC<{ value: number | null }> = ({ value }) => {
+  const { token } = useToken();
+  
   if (value === null || value === undefined) {
     return <Tag color="default">N/A</Tag>;
   }
@@ -53,7 +55,7 @@ const NegativeMoney: React.FC<{ value: number | null }> = ({ value }) => {
   }).format(value);
 
   return (
-    <span style={{ color: '#cf1322', fontWeight: 500 }}>
+    <span style={{ color: token.colorError, fontWeight: 500 }}>
       {formatted}
     </span>
   );

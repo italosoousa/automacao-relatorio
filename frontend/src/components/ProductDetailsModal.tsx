@@ -1,6 +1,6 @@
 // /frontend/src/components/ProductDetailsModal.tsx
 import React, { useMemo } from 'react';
-import { Modal, Descriptions, Tag, Typography, Divider, Card, Row, Col, Statistic, Space } from 'antd';
+import { Modal, Descriptions, Tag, Typography, Divider, Card, Row, Col, Statistic, Space, theme } from 'antd';
 import {
   ShoppingOutlined,
   DollarOutlined,
@@ -22,6 +22,7 @@ interface ProductDetailsModalProps {
 }
 
 const { Text, Title } = Typography;
+const { useToken } = theme;
 
 // Helper: moeda
 const formatCurrency = (value: number | null | undefined) => {
@@ -64,35 +65,37 @@ const statusColor = (status: string) => {
   return 'blue';
 };
 
-const getStatusGroupConfig = (statusGroup: string) => {
-  const configs: Record<string, { color: string; icon: React.ReactNode; label: string }> = {
-    ENVIADO: {
-      color: '#1890ff',
-      icon: <CheckCircleOutlined />,
-      label: 'Enviado',
-    },
-    A_ENVIAR: {
-      color: '#13c2c2',
-      icon: <ClockCircleOutlined />,
-      label: 'A Enviar',
-    },
-    MEDIACAO: {
-      color: '#fa8c16',
-      icon: <ExclamationCircleOutlined />,
-      label: 'Mediação',
-    },
-    CANCELADO: {
-      color: '#f5222d',
-      icon: <CloseCircleOutlined />,
-      label: 'Cancelado',
-    },
-  };
-
-  return configs[statusGroup] || { color: '#595959', icon: <TagOutlined />, label: statusGroup };
-};
-
 export const ProductDetailsModal: React.FC<ProductDetailsModalProps> = ({ open, onClose, data }) => {
+  const { token } = useToken();
+  
   if (!data) return null;
+  
+  const getStatusGroupConfig = (statusGroup: string) => {
+    const configs: Record<string, { color: string; icon: React.ReactNode; label: string }> = {
+      ENVIADO: {
+        color: token.colorSuccess,
+        icon: <CheckCircleOutlined />,
+        label: 'Enviado',
+      },
+      A_ENVIAR: {
+        color: token.colorInfo,
+        icon: <ClockCircleOutlined />,
+        label: 'A Enviar',
+      },
+      MEDIACAO: {
+        color: token.colorWarning,
+        icon: <ExclamationCircleOutlined />,
+        label: 'Mediação',
+      },
+      CANCELADO: {
+        color: token.colorError,
+        icon: <CloseCircleOutlined />,
+        label: 'Cancelado',
+      },
+    };
+
+    return configs[statusGroup] || { color: token.colorTextSecondary, icon: <TagOutlined />, label: statusGroup };
+  };
 
   const saleStatusTag = useMemo(() => {
     const text = data.status_description?.trim();
@@ -216,7 +219,7 @@ export const ProductDetailsModal: React.FC<ProductDetailsModalProps> = ({ open, 
                 precision={2}
                 prefix="R$"
                 valueStyle={{
-                  color: (data.lucro_bruto ?? 0) >= 0 ? '#3f8600' : '#cf1322',
+                  color: (data.lucro_bruto ?? 0) >= 0 ? token.colorSuccess : token.colorError,
                   fontSize: '1.5rem',
                   fontWeight: 600,
                 }}
@@ -229,7 +232,7 @@ export const ProductDetailsModal: React.FC<ProductDetailsModalProps> = ({ open, 
                 precision={2}
                 suffix="%"
                 valueStyle={{
-                  color: (marginPercent ?? 0) >= 0 ? '#3f8600' : '#cf1322',
+                  color: (marginPercent ?? 0) >= 0 ? token.colorSuccess : token.colorError,
                   fontSize: '1.5rem',
                 }}
               />
@@ -241,7 +244,7 @@ export const ProductDetailsModal: React.FC<ProductDetailsModalProps> = ({ open, 
                 precision={2}
                 suffix="%"
                 valueStyle={{
-                  color: (roiPercent ?? 0) >= 0 ? '#3f8600' : '#cf1322',
+                  color: (roiPercent ?? 0) >= 0 ? token.colorSuccess : token.colorError,
                   fontSize: '1.5rem',
                 }}
               />
@@ -258,7 +261,7 @@ export const ProductDetailsModal: React.FC<ProductDetailsModalProps> = ({ open, 
         }>
           <Descriptions bordered column={2} size="small">
             <Descriptions.Item label="Receita do Produto">
-              <Text strong style={{ color: '#3f8600', fontSize: '1rem' }}>
+              <Text strong style={{ color: token.colorSuccess, fontSize: '1rem' }}>
                 {formatCurrency(data.revenue_product)}
               </Text>
             </Descriptions.Item>
@@ -271,11 +274,11 @@ export const ProductDetailsModal: React.FC<ProductDetailsModalProps> = ({ open, 
 
             <Descriptions.Item label="Custo do Produto">
               {data.cost === null ? (
-                <Tag color="orange" icon={<ExclamationCircleOutlined />}>
+                <Tag color="warning" icon={<ExclamationCircleOutlined />}>
                   Não cadastrado
                 </Tag>
               ) : (
-                <Text strong style={{ color: '#cf1322', fontSize: '1rem' }}>
+                <Text strong style={{ color: token.colorError, fontSize: '1rem' }}>
                   {formatCurrency(data.cost)}
                 </Text>
               )}
@@ -292,19 +295,19 @@ export const ProductDetailsModal: React.FC<ProductDetailsModalProps> = ({ open, 
             </Descriptions.Item>
 
             <Descriptions.Item label="Tarifas e Impostos">
-              <Text style={{ color: '#cf1322' }}>
+              <Text style={{ color: token.colorError }}>
                 {formatCurrency(data.fee_taxes)}
               </Text>
             </Descriptions.Item>
 
             <Descriptions.Item label="Tarifas de Envio">
-              <Text style={{ color: '#cf1322' }}>
+              <Text style={{ color: token.colorError }}>
                 {formatCurrency(data.shipping_fees)}
               </Text>
             </Descriptions.Item>
 
             <Descriptions.Item label="Total de Taxas" span={2}>
-              <Text strong style={{ color: '#cf1322', fontSize: '1rem' }}>
+              <Text strong style={{ color: token.colorError, fontSize: '1rem' }}>
                 {formatCurrency(totalFees)}
               </Text>
             </Descriptions.Item>
@@ -315,7 +318,7 @@ export const ProductDetailsModal: React.FC<ProductDetailsModalProps> = ({ open, 
         {data.lucro_bruto === null && (
           <Card size="small" type="warning">
             <Space>
-              <ExclamationCircleOutlined style={{ color: '#faad14' }} />
+              <ExclamationCircleOutlined style={{ color: token.colorWarning }} />
               <Text type="warning">
                 <strong>Atenção:</strong> Este produto não possui custo cadastrado na base de dados.
                 O lucro bruto não pôde ser calculado.

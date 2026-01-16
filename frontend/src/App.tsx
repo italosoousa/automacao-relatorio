@@ -1,56 +1,35 @@
 // /frontend/src/App.tsx
 import React from "react";
-import { ConfigProvider, Layout, theme } from "antd";
+import { ConfigProvider, Layout } from "antd";
 import { BrowserRouter, Routes, Route } from "react-router-dom";
 import { MercadoLivreDashboardPage } from "./pages/MercadoLivreDashboardPage";
 import { RfidDashboardPage } from "./pages/RfidDashboardPage";
 import { SugestaoVendasDashboardPage } from "./pages/SugestaoVendasDashboardPage";
 import { Navigation } from "./components/Navigation";
+import { LogoBStories } from "./components/LogoBStories";
+import { bstoriesTheme } from "./theme/antd-bstories-theme";
+import { BStoriesThemeTokens } from "./theme/bstories-tokens";
 import "./index.css";
 
 const { Header, Footer } = Layout;
 
-// Configuração do tema escuro profissional
-const darkThemeConfig = {
-  algorithm: theme.darkAlgorithm,
-  token: {
-    // Cor primária moderna (um tom de azul)
-    colorPrimary: "#1677ff", // Azul padrão do Ant Design V5, que é moderno
-    // Cores para semântica
-    colorSuccess: "#52c41a", // Verde para lucro
-    colorError: "#ff4d4f", // Vermelho para prejuízo
-    colorWarning: "#faad14", // Laranja para avisos
-    // Fontes e fundo
-    fontFamily: "'Inter', sans-serif",
-    fontSize: 14,
-    // Fundo principal um pouco mais claro que o padrão para os cards se destacarem
-    colorBgLayout: "#141414",
-    colorBgContainer: "#1d1d1d",
-  },
-  components: {
-    Card: {
-      headerBg: "transparent",
-    },
-  },
-};
-
 const App: React.FC = () => (
-  <ConfigProvider theme={darkThemeConfig}>
+  <ConfigProvider theme={bstoriesTheme}>
     <BrowserRouter>
       <Layout style={{ minHeight: "100vh" }}>
         <Header
           style={{
-            background: darkThemeConfig.token.colorBgContainer,
+            background: BStoriesThemeTokens.backgroundElevated,
             padding: "0 24px",
-            borderBottom: "1px solid #303030",
+            borderBottom: `1px solid ${BStoriesThemeTokens.border}`,
             position: "sticky",
             top: 0,
             zIndex: 1000,
             display: "grid",
             gridTemplateColumns: "1fr auto 1fr",
             alignItems: "center",
-            boxShadow: "0 2px 8px rgba(0, 0, 0, 0.15)",
-            height: "64px",
+            boxShadow: `0 2px 8px ${BStoriesThemeTokens.shadowMedium}`,
+            height: "72px",
             gap: "16px",
           }}
         >
@@ -62,42 +41,33 @@ const App: React.FC = () => (
               flexShrink: 0,
             }}
           >
-            <div
-              style={{
-                width: "36px",
-                height: "36px",
-                borderRadius: "8px",
-                background: "linear-gradient(135deg, #1677ff 0%, #0958d9 100%)",
-                display: "flex",
-                alignItems: "center",
-                justifyContent: "center",
-                fontSize: "20px",
-                boxShadow: "0 2px 4px rgba(22, 119, 255, 0.3)",
-                flexShrink: 0,
-              }}
-            >
-              📊
-            </div>
+            <LogoBStories 
+              variant="icon" 
+              size="sm" 
+              withProtectionArea={false}
+            />
             <div style={{ flexShrink: 0 }}>
               <div
                 style={{
-                  fontSize: "16px",
+                  fontSize: "18px",
                   fontWeight: 600,
-                  color: "white",
+                  color: BStoriesThemeTokens.primary,
                   lineHeight: "1.2",
-                  letterSpacing: "-0.01em",
+                  letterSpacing: "-0.02em",
                   whiteSpace: "nowrap",
+                  fontFamily: "var(--font-heading)",
                 }}
               >
-                Analisador de Planilhas
+                B.stories Analytics
               </div>
               <div
                 style={{
-                  fontSize: "11px",
-                  color: "rgba(255, 255, 255, 0.65)",
+                  fontSize: "12px",
+                  color: BStoriesThemeTokens.textSecondary,
                   lineHeight: "1",
                   marginTop: "2px",
                   whiteSpace: "nowrap",
+                  fontFamily: "var(--font-body)",
                 }}
               >
                 Sistema de Relatórios
@@ -131,12 +101,19 @@ const App: React.FC = () => (
         <Footer
           style={{
             textAlign: "center",
-            background: darkThemeConfig.token.colorBgLayout,
-            padding: "16px",
-            fontSize: "0.85rem",
+            background: BStoriesThemeTokens.backgroundSecondary,
+            padding: "20px",
+            fontSize: "14px",
+            color: BStoriesThemeTokens.textSecondary,
+            borderTop: `1px solid ${BStoriesThemeTokens.border}`,
           }}
         >
-          Analisador de Planilhas ©{new Date().getFullYear()}
+          <div style={{ fontFamily: "var(--font-body)" }}>
+            <strong style={{ color: BStoriesThemeTokens.primary, fontFamily: "var(--font-heading)" }}>
+              B.stories
+            </strong>{" "}
+            Analytics ©{new Date().getFullYear()}
+          </div>
         </Footer>
       </Layout>
     </BrowserRouter>
