@@ -1,10 +1,13 @@
-from fastapi import APIRouter, Depends, HTTPException, status
+from fastapi import APIRouter, Depends, HTTPException, status, UploadFile, File
 from sqlalchemy.orm import Session
 from typing import List, Optional
 from app.database import get_db
 from app.models.product import Product
 from app.schemas.product import ProductCreate, ProductUpdate, ProductResponse
 from app.utils.parsing import norm_sku
+import pandas as pd
+from io import BytesIO
+from decimal import Decimal
 
 router = APIRouter(prefix="/api/products", tags=["products"])
 
@@ -155,3 +158,137 @@ async def create_products_bulk(
         )
     
     return created_products
+
+
+@router.post("/import-from-excel", status_code=status.HTTP_200_OK)
+async def import_products_from_excel(
+    file: UploadFile = File(..., description="Planilha Excel (.xlsx) com produtos"),
+    update_existing: bool = False,
+    db: Session = Depends(get_db)
+):
+    """
+    Importa produtos de uma planilha Excel.
+    
+    A planilha deve ter as seguintes colunas:
+    - CODIGO_LINX (obrigatório)
+    - DESCRICAO (opcional)
+    - SKU (opcional)
+    - CODIGO_BARRAS (opcional)
+    - PRECO_CUSTO (opcional)
+    
+    Parâmetros:
+    - update_existing: Se True, atualiza produtos existentes. Se False, ignora duplicados.
+    """
+    try:
+        # Ler arquivo Excel
+        file_bytes = await file.read()
+        df = pd.read_excel(BytesIO(file_bytes), engine="openpyxl")
+        
+        # Normalizar nomes das colunas (case insensitive, remove espaços)
+        df.columns = df.columns.str.strip().str.upper()
+        
+        # Verificar coluna obrigatória
+        if "CODIGO_LINX" not in df.columns:
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail="Coluna 'CODIGO_LINX' não encontrada na planilha. Colunas disponíveis: " + ", ".join(df.columns.tolist())
+            )
+        
+        # Mapear colunas (case insensitive)
+        column_mapping = {
+            "CODIGO_LINX": "codigo_linx",
+            "DESCRICAO": "descricao",
+            "SKU": "sku",
+            "CODIGO_BARRAS": "codigo_barras",
+            "PRECO_CUSTO": "preco_custo",
+            "PRECO": "preco_custo",  # Aceita também "PRECO"
+            "CUSTO": "preco_custo",  # Aceita também "CUSTO"
+        }
+        
+        # Preparar dados
+        created_count = 0
+        updated_count = 0
+        skipped_count = 0
+        errors = []
+        
+        for index, row in df.iterrows():
+            try:
+                codigo_linx = str(row["CODIGO_LINX"]).strip()
+                if not codigo_linx or codigo_linx.lower() in ["nan", "none", ""]:
+                    skipped_count += 1
+                    continue
+                
+                # Buscar produto existente
+                existing = db.query(Product).filter(Product.codigo_linx == codigo_linx).first()
+                
+                # Preparar dados do produto
+                product_data = {
+                    "codigo_linx": codigo_linx,
+                    "descricao": str(row.get("DESCRICAO", "")).strip() if pd.notna(row.get("DESCRICAO")) else None,
+                    "sku": str(row.get("SKU", "")).strip() if pd.notna(row.get("SKU")) else None,
+                    "codigo_barras": str(row.get("CODIGO_BARRAS", "")).strip() if pd.notna(row.get("CODIGO_BARRAS")) else None,
+                }
+                
+                # Processar preço (pode estar em PRECO_CUSTO, PRECO ou CUSTO)
+                preco = None
+                for col in ["PRECO_CUSTO", "PRECO", "CUSTO"]:
+                    if col in df.columns and pd.notna(row.get(col)):
+                        try:
+                            preco = Decimal(str(row[col]).replace(",", "."))
+                            break
+                        except:
+                            pass
+                
+                product_data["preco_custo"] = preco
+                
+                # Remover valores vazios
+                product_data = {k: v if v and v != "" else None for k, v in product_data.items()}
+                
+                if existing:
+                    if update_existing:
+                        # Atualizar produto existente
+                        for key, value in product_data.items():
+                            if key != "codigo_linx" and value is not None:
+                                setattr(existing, key, value)
+                        updated_count += 1
+                    else:
+                        skipped_count += 1
+                else:
+                    # Criar novo produto
+                    db_product = Product(**product_data)
+                    db.add(db_product)
+                    created_count += 1
+                    
+            except Exception as e:
+                errors.append(f"Linha {index + 2}: {str(e)}")
+                continue
+        
+        # Commit das mudanças
+        db.commit()
+        
+        # Refresh dos produtos criados
+        if created_count > 0:
+            db.query(Product).filter(Product.codigo_linx.in_(
+                [str(row["CODIGO_LINX"]).strip() for _, row in df.iterrows() 
+                 if str(row["CODIGO_LINX"]).strip() and pd.notna(row.get("CODIGO_LINX"))]
+            )).all()
+        
+        return {
+            "message": "Importação concluída",
+            "created": created_count,
+            "updated": updated_count,
+            "skipped": skipped_count,
+            "errors": errors if errors else None,
+            "total_rows": len(df)
+        }
+        
+    except pd.errors.EmptyDataError:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="A planilha está vazia"
+        )
+    except Exception as e:
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=f"Erro ao processar planilha: {str(e)}"
+        )
