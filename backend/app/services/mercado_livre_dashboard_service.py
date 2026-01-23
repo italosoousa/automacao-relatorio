@@ -1,5 +1,7 @@
 import pandas as pd
+from sqlalchemy.orm import Session
 from app.utils.parsing import norm_sku, to_float, safe_str
+from app.services.product_service import get_products_dict_by_sku
 
 
 def classify_status_group(estado: str | None, status_desc: str | None) -> str:
@@ -41,53 +43,45 @@ def classify_status_group(estado: str | None, status_desc: str | None) -> str:
     return "A_ENVIAR"
 
 
-def build_mercado_livre_dashboard(ml_bytes: bytes, base_bytes: bytes) -> dict:
+def build_mercado_livre_dashboard(ml_bytes: bytes, db: Session, use_base_file: bool = False, base_bytes: bytes = None) -> dict:
     # 1) Lê ML (header real na linha 6 do Excel -> header=5)
     ml = pd.read_excel(ml_bytes, header=5, engine="openpyxl")
 
-    # 2) Lê Base (SKU col A = "Código"; custo = "Custo Total Unit.")
-    base = pd.read_excel(base_bytes, header=0, engine="openpyxl")
-
-    # 3) Normaliza SKUs
-    ml["__sku"] = ml["SKU"].apply(norm_sku)
-    # Normaliza SKU do ML (coluna T -> já vem como "SKU")
+    # 2) Normaliza SKUs do ML
     ml["__sku"] = ml["SKU"].apply(norm_sku)
 
-    # Normaliza possíveis chaves na base
-    base["__sku_codigo"] = base["Código"].apply(norm_sku)
-    base["__sku_referencia"] = base["Referência"].apply(norm_sku) if "Referência" in base.columns else None
+    # 3) Busca produtos do banco de dados
+    ml_skus = ml["__sku"].dropna().unique().tolist()
+    products_dict = get_products_dict_by_sku(db, ml_skus)
 
-    # Decide qual coluna usar como chave, baseado em quantos batem
-    ml_sku_set = set(ml["__sku"].dropna().unique())
+    # 4) Se use_base_file=True, ainda permite usar planilha como fallback
+    # (útil para migração gradual)
+    base_cost_dict = {}
+    if use_base_file and base_bytes:
+        base = pd.read_excel(base_bytes, header=0, engine="openpyxl")
+        base["__sku_codigo"] = base["Código"].apply(norm_sku)
+        base["__sku_referencia"] = base["Referência"].apply(norm_sku) if "Referência" in base.columns else None
+        
+        ml_sku_set = set(ml_skus)
+        codigo_match = len(ml_sku_set.intersection(set(base["__sku_codigo"].dropna().unique()))) if "Código" in base.columns else 0
+        ref_match = len(ml_sku_set.intersection(set(base["__sku_referencia"].dropna().unique()))) if "Referência" in base.columns else 0
+        
+        if ref_match > codigo_match:
+            base["__sku"] = base["__sku_referencia"]
+        else:
+            base["__sku"] = base["__sku_codigo"]
+        
+        base_cost = base[["__sku", "Custo Total Unit."]].copy()
+        for _, row in base_cost.iterrows():
+            sku = row["__sku"]
+            if sku:
+                base_cost_dict[sku] = to_float(row.get("Custo Total Unit."))
 
-    codigo_match = 0
-    ref_match = 0
-
-    if "Código" in base.columns:
-        codigo_match = len(ml_sku_set.intersection(set(base["__sku_codigo"].dropna().unique())))
-
-    if "Referência" in base.columns:
-        ref_match = len(ml_sku_set.intersection(set(base["__sku_referencia"].dropna().unique())))
-
-    # Escolhe a melhor chave
-    if ref_match > codigo_match:
-        base["__sku"] = base["__sku_referencia"]
-    else:
-        base["__sku"] = base["__sku_codigo"]
-
-
-    # 4) Seleciona custo (e opcionalmente descrição da base, se quiser usar depois)
-    base_cost = base[["__sku", "Custo Total Unit."]].copy()
-    base_cost = base_cost.rename(columns={"Custo Total Unit.": "__cost"})
-
-    # 5) Merge por SKU
-    merged = ml.merge(base_cost, on="__sku", how="left")
-
-    # 6) Monta linhas no formato do frontend
+    # 5) Monta linhas no formato do frontend
     rows = []
     missing_skus = []
 
-    for _, r in merged.iterrows():
+    for _, r in ml.iterrows():
         sku = safe_str(r.get("__sku"))
         descricao = safe_str(r.get("Título do anúncio")) or safe_str(r.get("Variação")) or "—"
         estado = safe_str(r.get("Estado"))
@@ -98,7 +92,14 @@ def build_mercado_livre_dashboard(ml_bytes: bytes, base_bytes: bytes) -> dict:
         shipping_fees = to_float(r.get("Tarifas de envio (BRL)"))
         total = to_float(r.get("Total (BRL)"))
 
-        cost = to_float(r.get("__cost"))
+        # Busca custo do banco de dados primeiro, depois da planilha (se disponível)
+        cost = None
+        if sku:
+            product = products_dict.get(norm_sku(sku))
+            if product and product.preco_custo is not None:
+                cost = float(product.preco_custo)
+            elif use_base_file and base_bytes and sku in base_cost_dict:
+                cost = base_cost_dict[sku]
 
         # Classifica o status primeiro
         status_group = classify_status_group(estado, status_desc)

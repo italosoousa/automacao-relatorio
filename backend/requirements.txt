@@ -3,3 +3,10 @@ uvicorn[standard]
 python-multipart
 pandas
 openpyxl
+sqlalchemy
+pymysql
+cryptography
+alembic
+python-dotenv
+pydantic-settings
+passlib[bcrypt]

@@ -1,17 +1,40 @@
 import os
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
+from contextlib import asynccontextmanager
 from app.api.mercado_livre_dashboard import router as mercado_livre_dashboard_router
 from app.api.rfid_dashboard import router as rfid_dashboard_router
 from app.api.sugestao_vendas_dashboard import router as sugestao_vendas_dashboard_router
+from app.api.products import router as products_router
+from app.api.logs import router as logs_router
+from app.core.config import settings
+from app.database import engine, Base
+import logging
 
-app = FastAPI(title="Automacao Relatorio API")
+logger = logging.getLogger(__name__)
 
-# Configuração de CORS com suporte a variáveis de ambiente
-allowed_origins = os.getenv(
-    "ALLOWED_ORIGINS",
-    "http://localhost:5173,http://127.0.0.1:5173"
-).split(",")
+
+@asynccontextmanager
+async def lifespan(app: FastAPI):
+    # Startup: Tentar criar tabelas (não quebra se MySQL não estiver disponível)
+    try:
+        Base.metadata.create_all(bind=engine)
+        logger.info("✅ Tabelas do banco de dados criadas/verificadas com sucesso")
+    except Exception as e:
+        logger.warning(f"⚠️ Não foi possível conectar ao banco de dados: {e}")
+        logger.warning("⚠️ O app continuará funcionando, mas funcionalidades do banco estarão desabilitadas")
+        logger.warning("⚠️ Certifique-se de que o MySQL está rodando e o DATABASE_URL está correto no .env")
+    
+    yield
+    
+    # Shutdown (se necessário)
+    pass
+
+
+app = FastAPI(title="Automacao Relatorio API", lifespan=lifespan)
+
+# Configuração de CORS
+allowed_origins = settings.ALLOWED_ORIGINS.split(",")
 
 app.add_middleware(
     CORSMiddleware,
@@ -21,6 +44,9 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
+# Incluir routers
 app.include_router(mercado_livre_dashboard_router)
 app.include_router(rfid_dashboard_router)
 app.include_router(sugestao_vendas_dashboard_router)
+app.include_router(products_router)
+app.include_router(logs_router)
