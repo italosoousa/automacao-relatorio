@@ -20,7 +20,7 @@ sys.path.insert(0, str(Path(__file__).parent.parent))
 
 from app.database import SessionLocal
 from app.models.product import Product
-from app.utils.parsing import norm_sku
+from app.utils.parsing import norm_sku, safe_str
 
 
 def import_products_from_excel(file_path: str, update_existing: bool = False):
@@ -65,7 +65,14 @@ def import_products_from_excel(file_path: str, update_existing: bool = False):
         
         for index, row in df.iterrows():
             try:
-                codigo_linx = str(row["CODIGO_LINX"]).strip()
+                # Processar CODIGO_LINX com tratamento seguro de tipos
+                codigo_linx_raw = row.get("CODIGO_LINX")
+                if pd.isna(codigo_linx_raw):
+                    skipped_count += 1
+                    continue
+                
+                # Converter para string de forma segura (trata float, int, etc)
+                codigo_linx = safe_str(codigo_linx_raw)
                 if not codigo_linx or codigo_linx.lower() in ["nan", "none", ""]:
                     skipped_count += 1
                     continue
@@ -73,23 +80,29 @@ def import_products_from_excel(file_path: str, update_existing: bool = False):
                 # Buscar produto existente
                 existing = db.query(Product).filter(Product.codigo_linx == codigo_linx).first()
                 
-                # Preparar dados
+                # Preparar dados usando safe_str para todos os campos de texto
                 product_data = {
                     "codigo_linx": codigo_linx,
-                    "descricao": str(row.get("DESCRICAO", "")).strip() if pd.notna(row.get("DESCRICAO")) else None,
-                    "sku": str(row.get("SKU", "")).strip() if pd.notna(row.get("SKU")) else None,
-                    "codigo_barras": str(row.get("CODIGO_BARRAS", "")).strip() if pd.notna(row.get("CODIGO_BARRAS")) else None,
+                    "descricao": safe_str(row.get("DESCRICAO")),
+                    "sku": safe_str(row.get("SKU")),
+                    "codigo_barras": safe_str(row.get("CODIGO_BARRAS")),
                 }
                 
                 # Processar preço
                 preco = None
                 for col in ["PRECO_CUSTO", "PRECO", "CUSTO"]:
-                    if col in df.columns and pd.notna(row.get(col)):
-                        try:
-                            preco = Decimal(str(row[col]).replace(",", "."))
-                            break
-                        except:
-                            pass
+                    if col in df.columns:
+                        valor = row.get(col)
+                        if pd.notna(valor):
+                            try:
+                                # Converte para string primeiro, depois para Decimal
+                                if isinstance(valor, (int, float)):
+                                    preco = Decimal(str(valor).replace(",", "."))
+                                else:
+                                    preco = Decimal(str(valor).replace(",", "."))
+                                break
+                            except (ValueError, TypeError, Exception):
+                                pass
                 
                 product_data["preco_custo"] = preco
                 

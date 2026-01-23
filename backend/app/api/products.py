@@ -4,7 +4,7 @@ from typing import List, Optional
 from app.database import get_db
 from app.models.product import Product
 from app.schemas.product import ProductCreate, ProductUpdate, ProductResponse
-from app.utils.parsing import norm_sku
+from app.utils.parsing import norm_sku, safe_str
 import pandas as pd
 from io import BytesIO
 from decimal import Decimal
@@ -213,7 +213,14 @@ async def import_products_from_excel(
         
         for index, row in df.iterrows():
             try:
-                codigo_linx = str(row["CODIGO_LINX"]).strip()
+                # Processar CODIGO_LINX com tratamento seguro de tipos
+                codigo_linx_raw = row.get("CODIGO_LINX")
+                if pd.isna(codigo_linx_raw):
+                    skipped_count += 1
+                    continue
+                
+                # Converter para string de forma segura (trata float, int, etc)
+                codigo_linx = safe_str(codigo_linx_raw)
                 if not codigo_linx or codigo_linx.lower() in ["nan", "none", ""]:
                     skipped_count += 1
                     continue
@@ -221,23 +228,29 @@ async def import_products_from_excel(
                 # Buscar produto existente
                 existing = db.query(Product).filter(Product.codigo_linx == codigo_linx).first()
                 
-                # Preparar dados do produto
+                # Preparar dados do produto usando safe_str para todos os campos de texto
                 product_data = {
                     "codigo_linx": codigo_linx,
-                    "descricao": str(row.get("DESCRICAO", "")).strip() if pd.notna(row.get("DESCRICAO")) else None,
-                    "sku": str(row.get("SKU", "")).strip() if pd.notna(row.get("SKU")) else None,
-                    "codigo_barras": str(row.get("CODIGO_BARRAS", "")).strip() if pd.notna(row.get("CODIGO_BARRAS")) else None,
+                    "descricao": safe_str(row.get("DESCRICAO")),
+                    "sku": safe_str(row.get("SKU")),
+                    "codigo_barras": safe_str(row.get("CODIGO_BARRAS")),
                 }
                 
                 # Processar preço (pode estar em PRECO_CUSTO, PRECO ou CUSTO)
                 preco = None
                 for col in ["PRECO_CUSTO", "PRECO", "CUSTO"]:
-                    if col in df.columns and pd.notna(row.get(col)):
-                        try:
-                            preco = Decimal(str(row[col]).replace(",", "."))
-                            break
-                        except:
-                            pass
+                    if col in df.columns:
+                        valor = row.get(col)
+                        if pd.notna(valor):
+                            try:
+                                # Converte para string primeiro, depois para Decimal
+                                if isinstance(valor, (int, float)):
+                                    preco = Decimal(str(valor).replace(",", "."))
+                                else:
+                                    preco = Decimal(str(valor).replace(",", "."))
+                                break
+                            except (ValueError, TypeError, Exception):
+                                pass
                 
                 product_data["preco_custo"] = preco
                 
@@ -266,12 +279,8 @@ async def import_products_from_excel(
         # Commit das mudanças
         db.commit()
         
-        # Refresh dos produtos criados
-        if created_count > 0:
-            db.query(Product).filter(Product.codigo_linx.in_(
-                [str(row["CODIGO_LINX"]).strip() for _, row in df.iterrows() 
-                 if str(row["CODIGO_LINX"]).strip() and pd.notna(row.get("CODIGO_LINX"))]
-            )).all()
+        # Refresh dos produtos criados (não é estritamente necessário, mas ajuda)
+        # Removido para evitar problemas com tipos - o commit já persiste os dados
         
         return {
             "message": "Importação concluída",
