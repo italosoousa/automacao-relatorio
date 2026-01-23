@@ -27,13 +27,40 @@ def to_float(value) -> float | None:
 
 
 def safe_str(value) -> str | None:
+    """
+    Converte valor para string de forma segura.
+    Trata None, NaN, float, int, e outros tipos.
+    Remove .0 de floats inteiros do Excel.
+    """
     if value is None:
         return None
     try:
         if pd.isna(value):
             return None
-        s = str(value).strip()
-        return s if s else None
+        
+        # Se for float, trata especialmente (remove .0 se for inteiro)
+        if isinstance(value, float):
+            # Se for NaN (já verificado acima, mas por segurança)
+            if pd.isna(value):
+                return None
+            # Se for um float inteiro (ex: 12345.0, 48.0), converte para int primeiro
+            if value.is_integer():
+                s = str(int(value))
+            else:
+                # Para floats decimais, remove zeros à direita desnecessários
+                s = str(value)
+                if '.' in s:
+                    s = s.rstrip('0').rstrip('.')
+        elif isinstance(value, int):
+            s = str(value)
+        else:
+            s = str(value)
+            # Se a string resultante termina com .0, remove
+            if s.endswith('.0') and s.replace('.0', '').replace('-', '').isdigit():
+                s = s[:-2]
+        
+        s = s.strip()
+        return s if s and s.lower() not in ["nan", "none", ""] else None
     except Exception:
         return None
 
