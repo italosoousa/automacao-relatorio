@@ -3,8 +3,28 @@ from pydantic_settings import BaseSettings
 from typing import Optional
 
 
+def normalize_database_url(url: str) -> str:
+    """
+    Garante que a DATABASE_URL sempre use o driver pymysql.
+    Se a URL vier como mysql://, converte para mysql+pymysql://
+    """
+    if not url:
+        return "mysql+pymysql://usuario:senha@localhost:3306/nome_do_banco"
+    
+    # Se começar com mysql:// (sem driver), adiciona +pymysql
+    if url.startswith("mysql://"):
+        url = url.replace("mysql://", "mysql+pymysql://", 1)
+    # Se começar com mysql+mysqldb://, troca para pymysql
+    elif url.startswith("mysql+mysqldb://"):
+        url = url.replace("mysql+mysqldb://", "mysql+pymysql://", 1)
+    # Se já começar com mysql+pymysql://, mantém como está
+    
+    return url
+
+
 class Settings(BaseSettings):
     # Database
+    # Lê DATABASE_URL do ambiente (será normalizado após criação)
     DATABASE_URL: str = os.getenv(
         "DATABASE_URL",
         "mysql+pymysql://usuario:senha@localhost:3306/nome_do_banco"
@@ -26,4 +46,9 @@ class Settings(BaseSettings):
         case_sensitive = True
 
 
-settings = Settings()
+# Criar instância e normalizar DATABASE_URL
+_settings = Settings()
+# Normaliza a URL para garantir uso de pymysql
+_settings.DATABASE_URL = normalize_database_url(_settings.DATABASE_URL)
+
+settings = _settings
