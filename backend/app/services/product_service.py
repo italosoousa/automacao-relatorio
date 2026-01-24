@@ -35,21 +35,29 @@ def get_products_dict_by_sku(db: Session, skus: list) -> Dict[str, Product]:
     if not skus:
         return {}
     
-    # Normaliza todos os SKUs
-    normalized_skus = [norm_sku(sku) for sku in skus if norm_sku(sku)]
-    if not normalized_skus:
+    try:
+        # Normaliza todos os SKUs
+        normalized_skus = [norm_sku(sku) for sku in skus if norm_sku(sku)]
+        if not normalized_skus:
+            return {}
+        
+        # Busca produtos no banco
+        products = db.query(Product).filter(Product.sku.in_(normalized_skus)).all()
+        
+        # Cria dicionário {sku_normalizado: Product}
+        products_dict = {}
+        for product in products:
+            if product.sku:
+                products_dict[product.sku] = product
+        
+        return products_dict
+    except Exception as e:
+        # Se houver erro ao buscar do banco, retorna dicionário vazio
+        # Isso permite que o relatório continue funcionando mesmo sem conexão com o banco
+        import logging
+        logger = logging.getLogger(__name__)
+        logger.warning(f"Erro ao buscar produtos do banco por SKU: {str(e)}")
         return {}
-    
-    # Busca produtos no banco
-    products = db.query(Product).filter(Product.sku.in_(normalized_skus)).all()
-    
-    # Cria dicionário {sku_normalizado: Product}
-    products_dict = {}
-    for product in products:
-        if product.sku:
-            products_dict[product.sku] = product
-    
-    return products_dict
 
 
 def get_product_by_codigo_barras(db: Session, codigo_barras: str) -> Optional[Product]:

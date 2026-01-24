@@ -2,6 +2,9 @@ import pandas as pd
 from sqlalchemy.orm import Session
 from app.utils.parsing import norm_sku, to_float, safe_str
 from app.services.product_service import get_products_dict_by_sku
+import logging
+
+logger = logging.getLogger(__name__)
 
 
 def classify_status_group(estado: str | None, status_desc: str | None) -> str:
@@ -50,14 +53,34 @@ def build_mercado_livre_dashboard(ml_bytes: bytes, db: Session) -> dict:
     Busca produtos diretamente do banco de dados usando o SKU da planilha do ML.
     """
     # 1) Lê ML (header real na linha 6 do Excel -> header=5)
-    ml = pd.read_excel(ml_bytes, header=5, engine="openpyxl")
+    try:
+        ml = pd.read_excel(ml_bytes, header=5, engine="openpyxl")
+    except Exception as e:
+        logger.error(f"Erro ao ler arquivo Excel: {str(e)}")
+        raise ValueError(f"Erro ao ler arquivo Excel. Verifique se o arquivo está no formato correto: {str(e)}")
 
-    # 2) Normaliza SKUs do ML
-    ml["__sku"] = ml["SKU"].apply(norm_sku)
+    # Verifica se a coluna SKU existe
+    if "SKU" not in ml.columns:
+        available_cols = ", ".join(ml.columns.tolist())
+        error_msg = f"Coluna 'SKU' não encontrada na planilha. Colunas disponíveis: {available_cols}"
+        logger.error(error_msg)
+        raise KeyError(error_msg)
+
+    # 2) Normaliza SKUs do ML (trata valores None/NaN)
+    try:
+        ml["__sku"] = ml["SKU"].apply(lambda x: norm_sku(x) if pd.notna(x) else None)
+    except Exception as e:
+        logger.error(f"Erro ao normalizar SKUs: {str(e)}")
+        raise ValueError(f"Erro ao processar coluna SKU: {str(e)}")
 
     # 3) Busca produtos do banco de dados por SKU
-    ml_skus = ml["__sku"].dropna().unique().tolist()
-    products_dict = get_products_dict_by_sku(db, ml_skus)
+    try:
+        ml_skus = ml["__sku"].dropna().unique().tolist()
+        products_dict = get_products_dict_by_sku(db, ml_skus)
+    except Exception as e:
+        logger.error(f"Erro ao buscar produtos do banco: {str(e)}")
+        # Se falhar ao buscar do banco, continua com dicionário vazio
+        products_dict = {}
 
     # 5) Monta linhas no formato do frontend
     rows = []
