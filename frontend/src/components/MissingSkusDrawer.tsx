@@ -17,6 +17,12 @@ const columns: ColumnsType<MissingSkuItem> = [
     dataIndex: 'sku',
     key: 'sku',
     sorter: (a, b) => (a.sku || '').localeCompare(b.sku || ''),
+    render: (val: string | null) => {
+      if (!val || val.trim() === '') {
+        return <span style={{ color: '#ff4d4f', fontStyle: 'italic' }}>Sem SKU</span>;
+      }
+      return val;
+    },
   },
   {
     title: 'Descrição do Anúncio (ML)',
@@ -59,12 +65,12 @@ export const MissingSkusDrawer: React.FC<MissingSkusDrawerProps> = ({
   const handleCopy = async () => {
     try {
       const skuList = filteredItems
-        .map((item) => item.sku || '')
-        .filter(Boolean)
+        .map((item) => item.sku || 'SEM_SKU')
         .join('\n')
 
       await navigator.clipboard.writeText(skuList)
-      message.success(`${filteredItems.length} SKUs copiados para a área de transferência!`)
+      const count = filteredItems.length
+      message.success(`${count} ${count === 1 ? 'item copiado' : 'itens copiados'} para a área de transferência!`)
     } catch {
       message.error('Não foi possível copiar. Verifique as permissões do navegador.')
     }
@@ -102,7 +108,7 @@ export const MissingSkusDrawer: React.FC<MissingSkusDrawerProps> = ({
 
   return (
     <Drawer
-      title="SKUs sem cadastro na base"
+      title="Produtos não identificados"
       open={open}
       onClose={onClose}
       width={900}

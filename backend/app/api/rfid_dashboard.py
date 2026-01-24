@@ -32,8 +32,8 @@ async def rfid_dashboard_preview(
         microvix_bytes = await microvix_file.read()
         rfid_bytes = await rfid_file.read()
         
-        # Processar e gerar dashboard
-        result = build_rfid_dashboard(microvix_bytes, rfid_bytes)
+        # Processar e gerar dashboard (agora busca produtos do banco por código de barras)
+        result = build_rfid_dashboard(microvix_bytes, rfid_bytes, db)
         
         # Cria log da geração do relatório
         total_divergencias = result.get("cards", {}).get("total_divergencias", 0)

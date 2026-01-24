@@ -70,11 +70,11 @@ export const SummaryCards: React.FC<SummaryCardsProps> = ({ summary, filteredCou
                 </Col>
                 <Col xs={24} sm={12} lg={8}>
                     <KPICard 
-                        title="SKUs Sem Cadastro"
+                        title="Produtos Não Identificados"
                         value={summary.skus_sem_cadastro}
                         icon={<ExclamationCircleOutlined />}
                         color={summary.skus_sem_cadastro > 0 ? token.colorWarning : token.colorText}
-                        note={summary.skus_sem_cadastro > 0 ? "Lucro não pôde ser calculado" : "Todos os SKUs foram encontrados"}
+                        note={summary.skus_sem_cadastro > 0 ? "Produtos sem SKU ou sem cadastro - lucro não calculado" : "Todos os produtos foram identificados"}
                         onClick={summary.skus_sem_cadastro > 0 ? onMissingSkusClick : undefined} // Tornando o card clicável
                     />
                 </Col>

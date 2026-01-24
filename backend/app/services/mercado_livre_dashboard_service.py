@@ -43,39 +43,21 @@ def classify_status_group(estado: str | None, status_desc: str | None) -> str:
     return "A_ENVIAR"
 
 
-def build_mercado_livre_dashboard(ml_bytes: bytes, db: Session, use_base_file: bool = False, base_bytes: bytes = None) -> dict:
+def build_mercado_livre_dashboard(ml_bytes: bytes, db: Session) -> dict:
+    """
+    Gera dashboard do Mercado Livre.
+    
+    Busca produtos diretamente do banco de dados usando o SKU da planilha do ML.
+    """
     # 1) Lê ML (header real na linha 6 do Excel -> header=5)
     ml = pd.read_excel(ml_bytes, header=5, engine="openpyxl")
 
     # 2) Normaliza SKUs do ML
     ml["__sku"] = ml["SKU"].apply(norm_sku)
 
-    # 3) Busca produtos do banco de dados
+    # 3) Busca produtos do banco de dados por SKU
     ml_skus = ml["__sku"].dropna().unique().tolist()
     products_dict = get_products_dict_by_sku(db, ml_skus)
-
-    # 4) Se use_base_file=True, ainda permite usar planilha como fallback
-    # (útil para migração gradual)
-    base_cost_dict = {}
-    if use_base_file and base_bytes:
-        base = pd.read_excel(base_bytes, header=0, engine="openpyxl")
-        base["__sku_codigo"] = base["Código"].apply(norm_sku)
-        base["__sku_referencia"] = base["Referência"].apply(norm_sku) if "Referência" in base.columns else None
-        
-        ml_sku_set = set(ml_skus)
-        codigo_match = len(ml_sku_set.intersection(set(base["__sku_codigo"].dropna().unique()))) if "Código" in base.columns else 0
-        ref_match = len(ml_sku_set.intersection(set(base["__sku_referencia"].dropna().unique()))) if "Referência" in base.columns else 0
-        
-        if ref_match > codigo_match:
-            base["__sku"] = base["__sku_referencia"]
-        else:
-            base["__sku"] = base["__sku_codigo"]
-        
-        base_cost = base[["__sku", "Custo Total Unit."]].copy()
-        for _, row in base_cost.iterrows():
-            sku = row["__sku"]
-            if sku:
-                base_cost_dict[sku] = to_float(row.get("Custo Total Unit."))
 
     # 5) Monta linhas no formato do frontend
     rows = []
@@ -92,22 +74,27 @@ def build_mercado_livre_dashboard(ml_bytes: bytes, db: Session, use_base_file: b
         shipping_fees = to_float(r.get("Tarifas de envio (BRL)"))
         total = to_float(r.get("Total (BRL)"))
 
-        # Busca custo do banco de dados primeiro, depois da planilha (se disponível)
+        # Verifica se o produto tem SKU
+        has_sku = sku and sku.strip() != ""
+        
+        # Busca custo do banco de dados usando SKU (só se tiver SKU)
         cost = None
-        if sku:
+        if has_sku:
             product = products_dict.get(norm_sku(sku))
             if product and product.preco_custo is not None:
                 cost = float(product.preco_custo)
-            elif use_base_file and base_bytes and sku in base_cost_dict:
-                cost = base_cost_dict[sku]
 
         # Classifica o status primeiro
         status_group = classify_status_group(estado, status_desc)
 
         # Regra do lucro:
-        # Produtos com status MEDIACAO ou CANCELADO devem ter lucro_bruto como None
-        # Para os demais: valor da venda do produto - valor de custo
-        if status_group in ["MEDIACAO", "CANCELADO"]:
+        # 1. Produtos SEM SKU: lucro_bruto = None (não identificados)
+        # 2. Produtos com status MEDIACAO ou CANCELADO: lucro_bruto = None
+        # 3. Para os demais: valor da venda do produto - valor de custo
+        if not has_sku:
+            # Produto sem SKU: não calcula lucro e vai para produtos não identificados
+            lucro_bruto = None
+        elif status_group in ["MEDIACAO", "CANCELADO"]:
             lucro_bruto = None
         else:
             lucro_bruto = (total - cost) if (total is not None and cost is not None) else None
@@ -133,7 +120,16 @@ def build_mercado_livre_dashboard(ml_bytes: bytes, db: Session, use_base_file: b
 
         rows.append(row)
 
-        if sku and cost is None:
+        # Adiciona à lista de produtos não identificados se:
+        # 1. Não tem SKU, OU
+        # 2. Tem SKU mas não tem custo cadastrado no banco
+        if not has_sku:
+            missing_skus.append({
+                "sku": None,  # Sem SKU
+                "descricao": row["descricao"],
+                "estado": estado
+            })
+        elif has_sku and cost is None:
             missing_skus.append({
                 "sku": sku,
                 "descricao": row["descricao"],
@@ -144,11 +140,18 @@ def build_mercado_livre_dashboard(ml_bytes: bytes, db: Session, use_base_file: b
     total_itens = len(rows)
     skus_sem_cadastro = len(missing_skus)
 
-    # Calcula o lucro total apenas para produtos que não são MEDIACAO ou CANCELADO
+    # Calcula o lucro total apenas para produtos que:
+    # 1. Têm SKU (produtos identificados)
+    # 2. Não são MEDIACAO ou CANCELADO
+    # 3. Têm lucro_bruto calculado (não None)
     total_lucro = 0.0
     for x in rows:
-        # Só inclui no cálculo se lucro_bruto não for None e não for MEDIACAO ou CANCELADO
-        if x["lucro_bruto"] is not None and x["status_group"] not in ["MEDIACAO", "CANCELADO"]:
+        # Só inclui no cálculo se:
+        # - Tem SKU (produto identificado)
+        # - Lucro não é None
+        # - Status não é MEDIACAO ou CANCELADO
+        has_sku = x["sku"] and str(x["sku"]).strip() != ""
+        if has_sku and x["lucro_bruto"] is not None and x["status_group"] not in ["MEDIACAO", "CANCELADO"]:
             total_lucro += float(x["lucro_bruto"])
 
     # 8) Filter options (listas únicas e ordenadas)

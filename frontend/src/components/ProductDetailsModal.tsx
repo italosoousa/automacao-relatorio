@@ -68,8 +68,6 @@ const statusColor = (status: string) => {
 export const ProductDetailsModal: React.FC<ProductDetailsModalProps> = ({ open, onClose, data }) => {
   const { token } = useToken();
   
-  if (!data) return null;
-  
   const getStatusGroupConfig = (statusGroup: string) => {
     const configs: Record<string, { color: string; icon: React.ReactNode; label: string }> = {
       ENVIADO: {
@@ -98,33 +96,41 @@ export const ProductDetailsModal: React.FC<ProductDetailsModalProps> = ({ open, 
   };
 
   const saleStatusTag = useMemo(() => {
+    if (!data) return <Tag>Sem status</Tag>;
     const text = data.status_description?.trim();
     if (!text) return <Tag>Sem status</Tag>;
     return <Tag color={statusColor(text)}>{text}</Tag>;
-  }, [data.status_description]);
+  }, [data]);
 
-  const statusGroupConfig = getStatusGroupConfig(data.status_group);
+  const statusGroupConfig = useMemo(() => {
+    if (!data) return { color: token.colorTextSecondary, icon: <TagOutlined />, label: 'N/A' };
+    return getStatusGroupConfig(data.status_group);
+  }, [data, token.colorTextSecondary]);
 
   // Cálculos adicionais
   const marginPercent = useMemo(() => {
-    if (data.total === null || data.total === 0 || data.lucro_bruto === null) return null;
+    if (!data || data.total === null || data.total === 0 || data.lucro_bruto === null) return null;
     return (data.lucro_bruto / data.total) * 100;
-  }, [data.total, data.lucro_bruto]);
+  }, [data]);
 
   const roiPercent = useMemo(() => {
-    if (data.cost === null || data.cost === 0 || data.lucro_bruto === null) return null;
+    if (!data || data.cost === null || data.cost === 0 || data.lucro_bruto === null) return null;
     return (data.lucro_bruto / data.cost) * 100;
-  }, [data.cost, data.lucro_bruto]);
+  }, [data]);
 
   const totalFees = useMemo(() => {
+    if (!data) return null;
     const fees = (data.fee_taxes ?? 0) + (data.shipping_fees ?? 0);
     return fees > 0 ? fees : null;
-  }, [data.fee_taxes, data.shipping_fees]);
+  }, [data]);
 
   const netRevenue = useMemo(() => {
-    if (data.revenue_product === null) return null;
+    if (!data || data.revenue_product === null) return null;
     return data.revenue_product - (totalFees ?? 0);
-  }, [data.revenue_product, totalFees]);
+  }, [data, totalFees]);
+
+  // Early return DEPOIS de todos os hooks
+  if (!data) return null;
 
   return (
     <Modal

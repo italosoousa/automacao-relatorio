@@ -12,16 +12,19 @@ router = APIRouter(prefix="/api/mercado-livre-dashboard", tags=["mercado-livre-d
 @router.post("/preview", response_model=MercadoLivreDashboardResponse)
 async def mercado_livre_dashboard_preview(
     ml_file: UploadFile = File(...),
-    base_file: UploadFile = File(None),  # Opcional agora, pois usamos banco de dados
     db: Session = Depends(get_db),
 ):
+    """
+    Gera dashboard do Mercado Livre.
+    
+    Agora busca produtos diretamente do banco de dados usando o SKU.
+    Não é mais necessário enviar a planilha de base de produtos.
+    """
     try:
         ml_bytes = await ml_file.read()
-        base_bytes = await base_file.read() if base_file else None
 
-        # Usa banco de dados, mas permite fallback para planilha se fornecida
-        use_base_file = base_bytes is not None
-        result = build_mercado_livre_dashboard(ml_bytes, db, use_base_file, base_bytes)
+        # Busca produtos do banco de dados usando SKU
+        result = build_mercado_livre_dashboard(ml_bytes, db)
         
         # Cria log da geração do relatório
         log_entry = Log(

@@ -1,15 +1,20 @@
 import pandas as pd
 from io import BytesIO
+from sqlalchemy.orm import Session
 from app.utils.parsing import norm_ean, to_int, safe_str
+from app.services.product_service import get_products_dict_by_codigo_barras
 
 
-def build_rfid_dashboard(microvix_bytes: bytes, rfid_bytes: bytes) -> dict:
+def build_rfid_dashboard(microvix_bytes: bytes, rfid_bytes: bytes, db: Session) -> dict:
     """
     Processa as planilhas MICROVIX e RFID e retorna o dashboard de conferência.
+    
+    Busca produtos do banco de dados usando código de barras para obter descrições.
     
     Args:
         microvix_bytes: Bytes do arquivo MICROVIX.xlsx
         rfid_bytes: Bytes do arquivo RFID.csv
+        db: Sessão do banco de dados
     
     Returns:
         dict com estrutura: {cards, divergencias, ok, all}
@@ -129,8 +134,33 @@ def build_rfid_dashboard(microvix_bytes: bytes, rfid_bytes: bytes) -> dict:
     merged["__qtd_microvix"] = merged["__qtd_microvix"].fillna(0).astype(int)
     merged["__qtd_rfid"] = merged["__qtd_rfid"].fillna(0).astype(int)
     
-    # Escolher descrição: prioriza MICROVIX, senão RFID
-    merged["__descricao_final"] = merged["__descricao"].fillna(merged["__categoria"])
+    # ============================================================================
+    # 5.1. BUSCAR PRODUTOS DO BANCO DE DADOS POR CÓDIGO DE BARRAS
+    # ============================================================================
+    # Busca produtos do banco usando códigos de barras (EANs)
+    eans_list = merged["__ean"].dropna().unique().tolist()
+    products_dict = get_products_dict_by_codigo_barras(db, eans_list)
+    
+    # ============================================================================
+    # 5.2. ESCOLHER DESCRIÇÃO: Prioriza banco de dados, depois MICROVIX, depois RFID
+    # ============================================================================
+    def get_descricao_final(row):
+        ean = row["__ean"]
+        # Primeiro tenta buscar do banco de dados
+        if ean:
+            product = products_dict.get(norm_ean(ean))
+            if product and product.descricao:
+                return product.descricao
+        
+        # Se não encontrou no banco, usa MICROVIX
+        desc_microvix = row.get("__descricao")
+        if desc_microvix:
+            return desc_microvix
+        
+        # Por último, usa categoria do RFID
+        return row.get("__categoria")
+    
+    merged["__descricao_final"] = merged.apply(get_descricao_final, axis=1)
     
     # Calcular diferença
     merged["__diferenca"] = merged["__qtd_rfid"] - merged["__qtd_microvix"]

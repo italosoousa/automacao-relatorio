@@ -91,14 +91,13 @@ export interface MercadoLivreDashboardResponse {
 }
 
 export const getMercadoLivreDashboardPreview = async (
-  mlFile: File,
-  baseFile: File
+  mlFile: File
 ): Promise<MercadoLivreDashboardResponse> => {
   const formData = new FormData();
 
-  // IMPORTANTE: estes nomes precisam bater com o backend (FastAPI UploadFile params)
+  // IMPORTANTE: nome precisa bater com o backend (FastAPI UploadFile params)
+  // Agora só envia a planilha do ML - produtos são buscados do banco de dados
   formData.append("ml_file", mlFile);
-  formData.append("base_file", baseFile);
 
   try {
     const response = await axios.post<MercadoLivreDashboardResponse>(
