@@ -1,4 +1,5 @@
 import pandas as pd
+from io import BytesIO
 from sqlalchemy.orm import Session
 from app.utils.parsing import norm_sku, to_float, safe_str
 from app.services.product_service import get_products_dict_by_sku
@@ -54,7 +55,7 @@ def build_mercado_livre_dashboard(ml_bytes: bytes, db: Session) -> dict:
     """
     # 1) Lê ML (header real na linha 6 do Excel -> header=5)
     try:
-        ml = pd.read_excel(ml_bytes, header=5, engine="openpyxl")
+        ml = pd.read_excel(BytesIO(ml_bytes), header=5, engine="openpyxl")
     except Exception as e:
         logger.error(f"Erro ao ler arquivo Excel: {str(e)}")
         raise ValueError(f"Erro ao ler arquivo Excel. Verifique se o arquivo está no formato correto: {str(e)}")
@@ -82,30 +83,68 @@ def build_mercado_livre_dashboard(ml_bytes: bytes, db: Session) -> dict:
         # Se falhar ao buscar do banco, continua com dicionário vazio
         products_dict = {}
 
+    # Verifica se o DataFrame está vazio
+    if ml.empty:
+        logger.warning("DataFrame do Mercado Livre está vazio")
+        return {
+            "rows": [],
+            "summary": {
+                "total_lucro": 0.0,
+                "total_itens": 0,
+                "skus_sem_cadastro": 0,
+            },
+            "filter_options": {
+                "states": [],
+                "status_group": [],
+            },
+            "missing_skus": [],
+        }
+
     # 5) Monta linhas no formato do frontend
     rows = []
     missing_skus = []
 
     for _, r in ml.iterrows():
-        sku = safe_str(r.get("__sku"))
-        descricao = safe_str(r.get("Título do anúncio")) or safe_str(r.get("Variação")) or "—"
-        estado = safe_str(r.get("Estado"))
-        status_desc = safe_str(r.get("Descrição do status"))
+        # Acessa colunas do DataFrame corretamente
+        try:
+            # Usa .get() com valor padrão None para colunas que podem não existir
+            sku = safe_str(r.get("__sku")) if "__sku" in ml.columns else None
+            
+            # Tenta diferentes nomes de colunas para descrição
+            descricao = None
+            for col_name in ["Título do anúncio", "Titulo do anuncio", "Variação", "Variacao"]:
+                if col_name in ml.columns:
+                    descricao = safe_str(r.get(col_name))
+                    if descricao:
+                        break
+            descricao = descricao or "—"
+            
+            estado = safe_str(r.get("Estado")) if "Estado" in ml.columns else None
+            status_desc = safe_str(r.get("Descrição do status")) if "Descrição do status" in ml.columns else None
 
-        revenue_product = to_float(r.get("Receita por produtos (BRL)"))
-        fee_taxes = to_float(r.get("Tarifa de venda e impostos (BRL)"))
-        shipping_fees = to_float(r.get("Tarifas de envio (BRL)"))
-        total = to_float(r.get("Total (BRL)"))
+            revenue_product = to_float(r.get("Receita por produtos (BRL)")) if "Receita por produtos (BRL)" in ml.columns else None
+            fee_taxes = to_float(r.get("Tarifa de venda e impostos (BRL)")) if "Tarifa de venda e impostos (BRL)" in ml.columns else None
+            shipping_fees = to_float(r.get("Tarifas de envio (BRL)")) if "Tarifas de envio (BRL)" in ml.columns else None
+            total = to_float(r.get("Total (BRL)")) if "Total (BRL)" in ml.columns else None
+        except Exception as e:
+            logger.warning(f"Erro ao processar linha do DataFrame: {str(e)}")
+            continue
 
         # Verifica se o produto tem SKU
-        has_sku = sku and sku.strip() != ""
+        has_sku = sku and isinstance(sku, str) and sku.strip() != ""
         
         # Busca custo do banco de dados usando SKU (só se tiver SKU)
         cost = None
         if has_sku:
-            product = products_dict.get(norm_sku(sku))
-            if product and product.preco_custo is not None:
-                cost = float(product.preco_custo)
+            try:
+                normalized_sku = norm_sku(sku)
+                if normalized_sku:
+                    product = products_dict.get(normalized_sku)
+                    if product and product.preco_custo is not None:
+                        cost = float(product.preco_custo)
+            except Exception as e:
+                logger.warning(f"Erro ao buscar custo para SKU {sku}: {str(e)}")
+                cost = None
 
         # Classifica o status primeiro
         status_group = classify_status_group(estado, status_desc)
@@ -130,15 +169,15 @@ def build_mercado_livre_dashboard(ml_bytes: bytes, db: Session) -> dict:
             "status_group": status_group,
 
             # modal:
-            "sale_number": safe_str(r.get("N.º de venda")),
-            "sale_date": safe_str(r.get("Data da venda")),  # mantém "humano", seu modal já trata
+            "sale_number": safe_str(r.get("N.º de venda")) if "N.º de venda" in ml.columns else None,
+            "sale_date": safe_str(r.get("Data da venda")) if "Data da venda" in ml.columns else None,  # mantém "humano", seu modal já trata
             "status_description": status_desc,
             "revenue_product": revenue_product,
             "fee_taxes": fee_taxes,
             "shipping_fees": shipping_fees,
             "total": total,
             "cost": cost,
-            "ml_listing_id": safe_str(r.get("# de anúncio")),
+            "ml_listing_id": safe_str(r.get("# de anúncio")) if "# de anúncio" in ml.columns else None,
         }
 
         rows.append(row)
