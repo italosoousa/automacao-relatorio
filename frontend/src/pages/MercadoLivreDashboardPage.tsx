@@ -2,7 +2,7 @@
 import React, { useState, useMemo } from 'react';
 import { Layout, Typography, Alert, Spin, Result, Space, Input, Divider, Card } from 'antd';
 
-import { FileUpload } from '../components/FileUpload';
+import { FileUploadSingle } from '../components/FileUploadSingle';
 import { getMercadoLivreDashboardPreview, MercadoLivreDashboardResponse, MercadoLivreDashboardRow } from '../api/mercadoLivreDashboard';
 import { SummaryCards } from '../components/SummaryCards';
 import { StatusFilter } from '../components/StatusFilter';
@@ -39,7 +39,7 @@ export const MercadoLivreDashboardPage: React.FC = () => {
   const [minProfit, setMinProfit] = useState<number | null>(null);
   const [maxProfit, setMaxProfit] = useState<number | null>(null);
 
-  const handleGenerate = async (mlFile: File, baseFile: File) => {
+  const handleGenerate = async (mlFile: File) => {
     setLoading(true);
     setError(null);
     setDashboardData(null);
@@ -52,7 +52,7 @@ export const MercadoLivreDashboardPage: React.FC = () => {
     setMaxProfit(null);
 
     try {
-      const data = await getMercadoLivreDashboardPreview(mlFile, baseFile);
+      const data = await getMercadoLivreDashboardPreview(mlFile);
       setDashboardData(data);
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Ocorreu um erro desconhecido.');
@@ -178,8 +178,10 @@ export const MercadoLivreDashboardPage: React.FC = () => {
           )}
         </div>
 
-        <FileUpload 
-          onGenerate={handleGenerate} 
+        <FileUploadSingle 
+          onGenerate={handleGenerate}
+          fileLabel="Planilha do Mercado Livre"
+          buttonText="Gerar Dashboard" 
           loading={loading}
           file1Label="Planilha do Mercado Livre"
           file2Label="Planilha Base de Produtos"
@@ -203,7 +205,7 @@ export const MercadoLivreDashboardPage: React.FC = () => {
           <Result
             icon={<Text style={{ fontSize: 48 }}>📊</Text>}
             title="Aguardando arquivos"
-            subTitle="Por favor, faça o upload das duas planilhas e clique em 'Gerar Dashboard' para começar."
+            subTitle="Por favor, faça o upload da planilha do Mercado Livre e clique em 'Gerar Dashboard' para começar. Os produtos serão buscados automaticamente do banco de dados."
           />
         )}
 
