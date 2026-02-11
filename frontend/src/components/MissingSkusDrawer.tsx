@@ -3,7 +3,7 @@ import React, { useMemo, useState } from 'react'
 import { Drawer, Table, Input, Button, Space, message, Tooltip } from 'antd'
 import { CopyOutlined, DownloadOutlined } from '@ant-design/icons'
 import type { ColumnsType } from 'antd/es/table'
-import type { MissingSkuItem } from '../api/dashboard'
+import type { MissingSkuItem } from '@/api/dashboard'
 
 interface MissingSkusDrawerProps {
   open: boolean

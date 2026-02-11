@@ -2,7 +2,7 @@
 import React, { useMemo } from 'react';
 import { Table, Tag, Tooltip, Typography, theme } from 'antd';
 import type { ColumnsType } from 'antd/es/table';
-import { DashboardRow } from '../api/dashboard';
+import { DashboardRow } from '@/api/dashboard';
 
 const { useToken } = theme;
 const { Text } = Typography;

@@ -8,7 +8,7 @@ import {
     CheckCircleOutlined,
     FilterOutlined
 } from '@ant-design/icons';
-import { DashboardSummary } from '../api/dashboard';
+import { DashboardSummary } from '@/api/dashboard';
 
 const { useToken } = theme;
 

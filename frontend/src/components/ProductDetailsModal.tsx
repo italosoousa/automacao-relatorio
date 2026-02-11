@@ -13,7 +13,7 @@ import {
   ExclamationCircleOutlined,
   ClockCircleOutlined,
 } from '@ant-design/icons';
-import { DashboardRow } from '../api/dashboard';
+import { DashboardRow } from '@/api/dashboard';
 
 interface ProductDetailsModalProps {
   open: boolean;
