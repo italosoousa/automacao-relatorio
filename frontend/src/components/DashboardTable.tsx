@@ -1,8 +1,8 @@
 // /frontend/src/components/DashboardTable.tsx
-import React, { useMemo } from 'react';
-import { Table, Tag, Tooltip, Typography, theme } from 'antd';
-import type { ColumnsType } from 'antd/es/table';
-import { DashboardRow } from '@/api/dashboard';
+import React, { useMemo } from "react";
+import { Table, Tag, Tooltip, Typography, theme } from "antd";
+import type { ColumnsType } from "antd/es/table";
+import { DashboardRow } from "@/api/dashboard";
 
 const { useToken } = theme;
 const { Text } = Typography;
@@ -13,14 +13,16 @@ const { Text } = Typography;
 type RowWithKey = DashboardRow & { __rowKey: string };
 
 const formatCurrency = (value: number | null | undefined) => {
-  if (value === null || value === undefined) return '—';
-  return new Intl.NumberFormat('pt-BR', {
-    style: 'currency',
-    currency: 'BRL',
+  if (value === null || value === undefined) return "—";
+  return new Intl.NumberFormat("pt-BR", {
+    style: "currency",
+    currency: "BRL",
   }).format(value);
 };
 
-const MoneyCell: React.FC<{ value: number | null | undefined }> = ({ value }) => {
+const MoneyCell: React.FC<{ value: number | null | undefined }> = ({
+  value,
+}) => {
   const { token } = useToken();
 
   if (value === null || value === undefined) {
@@ -28,10 +30,16 @@ const MoneyCell: React.FC<{ value: number | null | undefined }> = ({ value }) =>
   }
 
   // cor neutra pra números “normais”
-  return <span style={{ color: token.colorText, fontWeight: 500 }}>{formatCurrency(value)}</span>;
+  return (
+    <span style={{ color: token.colorText, fontWeight: 500 }}>
+      {formatCurrency(value)}
+    </span>
+  );
 };
 
-const ProfitCell: React.FC<{ value: number | null | undefined }> = ({ value }) => {
+const ProfitCell: React.FC<{ value: number | null | undefined }> = ({
+  value,
+}) => {
   const { token } = useToken();
 
   if (value === null || value === undefined) {
@@ -39,19 +47,21 @@ const ProfitCell: React.FC<{ value: number | null | undefined }> = ({ value }) =
   }
 
   const color = value >= 0 ? token.colorSuccess : token.colorError;
-  return <span style={{ color, fontWeight: 600 }}>{formatCurrency(value)}</span>;
+  return (
+    <span style={{ color, fontWeight: 600 }}>{formatCurrency(value)}</span>
+  );
 };
 
 const NegativeMoney: React.FC<{ value: number | null }> = ({ value }) => {
   const { token } = useToken();
-  
+
   if (value === null || value === undefined) {
     return <Tag color="default">N/A</Tag>;
   }
 
-  const formatted = new Intl.NumberFormat('pt-BR', {
-    style: 'currency',
-    currency: 'BRL',
+  const formatted = new Intl.NumberFormat("pt-BR", {
+    style: "currency",
+    currency: "BRL",
   }).format(value);
 
   return (
@@ -61,16 +71,15 @@ const NegativeMoney: React.FC<{ value: number | null }> = ({ value }) => {
   );
 };
 
-
 const StatusGroupTag: React.FC<{ status: string }> = ({ status }) => {
   const colorMapping: Record<string, string> = {
-    ENVIADO: 'blue',
-    A_ENVIAR: 'cyan',
-    MEDIACAO: 'orange',
-    CANCELADO: 'red',
+    ENVIADO: "blue",
+    A_ENVIAR: "cyan",
+    MEDIACAO: "orange",
+    CANCELADO: "red",
   };
 
-  return <Tag color={colorMapping[status] || 'default'}>{status}</Tag>;
+  return <Tag color={colorMapping[status] || "default"}>{status}</Tag>;
 };
 
 /**
@@ -78,11 +87,11 @@ const StatusGroupTag: React.FC<{ status: string }> = ({ status }) => {
  */
 const columns: ColumnsType<RowWithKey> = [
   {
-    title: 'SKU',
-    dataIndex: 'sku',
-    key: 'sku',
+    title: "SKU",
+    dataIndex: "sku",
+    key: "sku",
     width: 120,
-    sorter: (a, b) => (a.sku || '').localeCompare(b.sku || ''),
+    sorter: (a, b) => (a.sku || "").localeCompare(b.sku || ""),
     render: (sku) =>
       sku ? (
         <Text strong copyable>
@@ -93,12 +102,12 @@ const columns: ColumnsType<RowWithKey> = [
       ),
   },
   {
-    title: 'Descrição',
-    dataIndex: 'descricao',
-    key: 'descricao',
+    title: "Descrição",
+    dataIndex: "descricao",
+    key: "descricao",
     width: 320,
     ellipsis: true,
-    sorter: (a, b) => (a.descricao || '').localeCompare(b.descricao || ''),
+    sorter: (a, b) => (a.descricao || "").localeCompare(b.descricao || ""),
     render: (text: string, record) => {
       const content = (
         <span style={{ opacity: record.lucro_bruto === null ? 0.85 : 1 }}>
@@ -119,109 +128,111 @@ const columns: ColumnsType<RowWithKey> = [
         );
       }
 
-      return (
-        <Tooltip title={text}>
-          {content}
-        </Tooltip>
-      );
+      return <Tooltip title={text}>{content}</Tooltip>;
     },
   },
   {
-    title: 'Status',
-    dataIndex: 'status_group',
-    key: 'status_group',
+    title: "Status",
+    dataIndex: "status_group",
+    key: "status_group",
     width: 120,
-    sorter: (a, b) => (a.status_group || '').localeCompare(b.status_group || ''),
+    sorter: (a, b) =>
+      (a.status_group || "").localeCompare(b.status_group || ""),
     render: (status: string) => <StatusGroupTag status={status} />,
   },
   {
-    title: 'Estado',
-    dataIndex: 'estado',
-    key: 'estado',
+    title: "Estado",
+    dataIndex: "estado",
+    key: "estado",
     width: 220,
     ellipsis: true,
-    sorter: (a, b) => (a.estado || '').localeCompare(b.estado || ''),
+    sorter: (a, b) => (a.estado || "").localeCompare(b.estado || ""),
     render: (estado: string | null) => (
-      <Tooltip title={estado || 'Indefinido'}>
-        <span>{estado || 'Indefinido'}</span>
+      <Tooltip title={estado || "Indefinido"}>
+        <span>{estado || "Indefinido"}</span>
       </Tooltip>
     ),
   },
 
   // Financeiro (ML)
   {
-  title: 'Receita (Produto)',
-  dataIndex: 'revenue_product',
-  key: 'revenue_product',
-  align: 'right',
-  render: (value) =>
-    value === null || value === undefined ? (
-      <Tag>N/A</Tag>
-    ) : (
-      new Intl.NumberFormat('pt-BR', {
-        style: 'currency',
-        currency: 'BRL',
-      }).format(value)
-    ),
-},
-{
-  title: 'Tarifa + Impostos',
-  dataIndex: 'fee_taxes',
-  key: 'fee_taxes',
-  align: 'right',
-  render: (value) => <NegativeMoney value={value} />,
-},
-{
-  title: 'Tarifa de Envio',
-  dataIndex: 'shipping_fees',
-  key: 'shipping_fees',
-  align: 'right',
-  render: (value) => <NegativeMoney value={value} />,
-},
+    title: "Receita (Produto)",
+    dataIndex: "revenue_product",
+    key: "revenue_product",
+    align: "right",
+    render: (value) =>
+      value === null || value === undefined ? (
+        <Tag>N/A</Tag>
+      ) : (
+        new Intl.NumberFormat("pt-BR", {
+          style: "currency",
+          currency: "BRL",
+        }).format(value)
+      ),
+  },
+  {
+    title: "Tarifa + Impostos",
+    dataIndex: "fee_taxes",
+    key: "fee_taxes",
+    align: "right",
+    render: (value) => <NegativeMoney value={value} />,
+  },
+  {
+    title: "Tarifa de Envio",
+    dataIndex: "shipping_fees",
+    key: "shipping_fees",
+    align: "right",
+    render: (value) => <NegativeMoney value={value} />,
+  },
 
   {
-    title: 'Total (ML)',
-    dataIndex: 'total',
-    key: 'total',
+    title: "Total (ML)",
+    dataIndex: "total",
+    key: "total",
     width: 140,
-    align: 'right',
+    align: "right",
     sorter: (a, b) => (a.total ?? -Infinity) - (b.total ?? -Infinity),
     render: (value) => <MoneyCell value={value} />,
   },
 
   // Base
   {
-    title: 'Custo',
-    dataIndex: 'cost',
-    key: 'cost',
+    title: "Custo",
+    dataIndex: "cost",
+    key: "cost",
     width: 130,
-    align: 'right',
+    align: "right",
     sorter: (a, b) => (a.cost ?? -Infinity) - (b.cost ?? -Infinity),
     render: (value: number | null) =>
-      value === null ? <Tag color="orange">Não cadastrado</Tag> : <MoneyCell value={value} />,
+      value === null ? (
+        <Tag color="orange">Não cadastrado</Tag>
+      ) : (
+        <MoneyCell value={value} />
+      ),
   },
 
   // Resultado
   {
-    title: 'Lucro Bruto',
-    dataIndex: 'lucro_bruto',
-    key: 'lucro_bruto',
+    title: "Lucro Bruto",
+    dataIndex: "lucro_bruto",
+    key: "lucro_bruto",
     width: 140,
-    align: 'right',
-    sorter: (a, b) => (a.lucro_bruto ?? -Infinity) - (b.lucro_bruto ?? -Infinity),
+    align: "right",
+    sorter: (a, b) =>
+      (a.lucro_bruto ?? -Infinity) - (b.lucro_bruto ?? -Infinity),
     render: (value) => <ProfitCell value={value} />,
   },
 
   {
-    title: 'Anúncio (ML)',
-    dataIndex: 'ml_listing_id',
-    key: 'ml_listing_id',
+    title: "Anúncio (ML)",
+    dataIndex: "ml_listing_id",
+    key: "ml_listing_id",
     width: 170,
     ellipsis: true,
     render: (val: string | null) => (
-      <Tooltip title={val || '—'}>
+      <Tooltip title={val || "—"}>
         <Text copyable style={{ opacity: val ? 1 : 0.6 }}>
-          {val || '—'}
+          {val || "—"}
         </Text>
       </Tooltip>
     ),
@@ -233,14 +244,14 @@ const columns: ColumnsType<RowWithKey> = [
  */
 function buildRowSignature(row: DashboardRow) {
   return [
-    row.sku ?? '',
-    row.descricao ?? '',
-    row.status_group ?? '',
-    row.estado ?? '',
-    row.lucro_bruto ?? '',
-    row.sale_number ?? '',
-    row.ml_listing_id ?? '',
-  ].join('|');
+    row.sku ?? "",
+    row.descricao ?? "",
+    row.status_group ?? "",
+    row.estado ?? "",
+    row.lucro_bruto ?? "",
+    row.sale_number ?? "",
+    row.ml_listing_id ?? "",
+  ].join("|");
 }
 
 export const DashboardTable: React.FC<{
@@ -267,24 +278,35 @@ export const DashboardTable: React.FC<{
   }, [data]);
 
   return (
-    <Table<RowWithKey>
-      columns={columns}
-      dataSource={dataWithKeys}
-      loading={loading}
-      rowKey="__rowKey"
-      pagination={{
-        pageSize: 20,
-        showSizeChanger: true,
-        pageSizeOptions: ['10', '20', '50', '100'],
-        showTotal: (total, range) => `${range[0]}-${range[1]} de ${total} itens`,
-        responsive: true,
+    <div
+      style={{
+        width: "100%",
+        overflowX: "auto",
+        WebkitOverflowScrolling: "touch",
       }}
-      scroll={{ x: 'max-content' }}
-      size="middle"
-      onRow={(record) => ({
-        onClick: () => onRowClick(record),
-        style: { cursor: 'pointer' },
-      })}
-    />
+    >
+      <div style={{ minWidth: 1100 }}>
+        <Table<RowWithKey>
+          columns={columns}
+          dataSource={dataWithKeys}
+          loading={loading}
+          rowKey="__rowKey"
+          pagination={{
+            pageSize: 20,
+            showSizeChanger: true,
+            pageSizeOptions: ["10", "20", "50", "100"],
+            showTotal: (total, range) =>
+              `${range[0]}-${range[1]} de ${total} itens`,
+            responsive: true,
+          }}
+          scroll={{ x: "max-content", y: "calc(100vh - 320px)" }}
+          size="middle"
+          onRow={(record) => ({
+            onClick: () => onRowClick(record),
+            style: { cursor: "pointer" },
+          })}
+        />
+      </div>
+    </div>
   );
 };
