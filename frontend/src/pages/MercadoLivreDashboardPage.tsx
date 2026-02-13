@@ -178,14 +178,11 @@ export const MercadoLivreDashboardPage: React.FC = () => {
           )}
         </div>
 
-        <FileUploadSingle 
+        <FileUploadSingle
           onGenerate={handleGenerate}
           fileLabel="Planilha do Mercado Livre"
-          buttonText="Gerar Dashboard" 
-          loading={loading}
-          file1Label="Planilha do Mercado Livre"
-          file2Label="Planilha Base de Produtos"
           buttonText="Gerar Dashboard"
+          loading={loading}
         />
 
         {error && (

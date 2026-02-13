@@ -1,19 +1,18 @@
 // /frontend/src/components/ProductDetailsModal.tsx
 import React, { useMemo } from 'react';
-import { Modal, Descriptions, Tag, Typography, Divider, Card, Row, Col, Statistic, Space, theme } from 'antd';
+import { Modal, Descriptions, Tag, Typography, Card, Row, Col, Statistic, Space, theme } from 'antd';
 import {
   ShoppingOutlined,
   DollarOutlined,
   CalendarOutlined,
   TagOutlined,
   FileTextOutlined,
-  PercentageOutlined,
   CheckCircleOutlined,
   CloseCircleOutlined,
   ExclamationCircleOutlined,
   ClockCircleOutlined,
 } from '@ant-design/icons';
-import { DashboardRow } from '../api/dashboard';
+import { DashboardRow } from '@/api/dashboard';
 
 interface ProductDetailsModalProps {
   open: boolean;
@@ -21,19 +20,13 @@ interface ProductDetailsModalProps {
   data: DashboardRow | null;
 }
 
-const { Text, Title } = Typography;
+const { Text } = Typography;
 const { useToken } = theme;
 
 // Helper: moeda
 const formatCurrency = (value: number | null | undefined) => {
   if (value === null || typeof value === 'undefined') return 'N/A';
   return value.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' });
-};
-
-// Helper: percentual
-const formatPercent = (value: number | null | undefined) => {
-  if (value === null || typeof value === 'undefined') return 'N/A';
-  return `${value.toFixed(2)}%`;
 };
 
 // Helper: data
@@ -109,13 +102,15 @@ export const ProductDetailsModal: React.FC<ProductDetailsModalProps> = ({ open, 
 
   // Cálculos adicionais
   const marginPercent = useMemo(() => {
-    if (!data || data.total === null || data.total === 0 || data.lucro_bruto === null) return null;
-    return (data.lucro_bruto / data.total) * 100;
+    const total = data?.total ?? null;
+    if (!data || total === null || total === 0 || data.lucro_bruto === null) return null;
+    return (data.lucro_bruto / total) * 100;
   }, [data]);
 
   const roiPercent = useMemo(() => {
-    if (!data || data.cost === null || data.cost === 0 || data.lucro_bruto === null) return null;
-    return (data.lucro_bruto / data.cost) * 100;
+    const cost = data?.cost ?? null;
+    if (!data || cost === null || cost === 0 || data.lucro_bruto === null) return null;
+    return (data.lucro_bruto / cost) * 100;
   }, [data]);
 
   const totalFees = useMemo(() => {
@@ -125,8 +120,9 @@ export const ProductDetailsModal: React.FC<ProductDetailsModalProps> = ({ open, 
   }, [data]);
 
   const netRevenue = useMemo(() => {
-    if (!data || data.revenue_product === null) return null;
-    return data.revenue_product - (totalFees ?? 0);
+    const rev = data?.revenue_product;
+    if (!data || rev === null || rev === undefined) return null;
+    return rev - (totalFees ?? 0);
   }, [data, totalFees]);
 
   // Early return DEPOIS de todos os hooks
@@ -173,6 +169,10 @@ export const ProductDetailsModal: React.FC<ProductDetailsModalProps> = ({ open, 
 
             <Descriptions.Item label="Descrição" span={2}>
               <Text>{data.descricao || 'N/A'}</Text>
+            </Descriptions.Item>
+
+            <Descriptions.Item label="Quantidade">
+              <Text strong>{data.quantity ?? 1}</Text>
             </Descriptions.Item>
 
             <Descriptions.Item label="Estado">
@@ -322,7 +322,7 @@ export const ProductDetailsModal: React.FC<ProductDetailsModalProps> = ({ open, 
 
         {/* Informações Adicionais */}
         {data.lucro_bruto === null && (
-          <Card size="small" type="warning">
+          <Card size="small" style={{ borderColor: token.colorWarning }}>
             <Space>
               <ExclamationCircleOutlined style={{ color: token.colorWarning }} />
               <Text type="warning">

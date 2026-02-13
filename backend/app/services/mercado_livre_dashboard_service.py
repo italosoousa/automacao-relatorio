@@ -18,7 +18,19 @@ def classify_status_group(estado: str | None, status_desc: str | None) -> str:
     # 1. MEDIACAO: mediações, reclamações e disputas
     # Verifica ANTES de cancelado para evitar que mediações sejam classificadas como canceladas
     # Exemplos: "em mediação", "reclamação", "disputa", "mediação aberta"
-    mediacao_keywords = ["media", "reclama", "disputa", "mediacao", "mediação"]
+    mediacao_keywords = [
+        # termos gerais
+        "media", "mediacao", "mediação",
+        "reclama", "reclamacao", "reclamação",
+        "disputa",
+
+        # frases comuns vistas na planilha (estado/descrição)
+        "reclamação encerr", "reclamacao encerr",
+        "mediação finaliz", "mediacao finaliz",
+        "devolução habilitada", "devolucao habilitada",
+        "não poderá reiniciar", "nao podera reiniciar",
+        "não sera possivel abrir", "não será possível abrir",
+    ]
     if any(keyword in text for keyword in mediacao_keywords):
         return "MEDIACAO"
     
@@ -26,9 +38,25 @@ def classify_status_group(estado: str | None, status_desc: str | None) -> str:
     # Verifica devoluções ANTES de "entregue/enviado" para evitar falsos positivos
     # Exemplos: "devolvido", "devolução", "retorno", "reembolso", "cancelado"
     cancel_keywords = [
-        "cancel", "reembolso", "reembols", "devolv", "devolução", 
-        "devolvido", "devolvida", "retorn", "retorno", "troca",
-        "estorn", "estorno", "devol", "devolucao"
+        # termos gerais
+        "cancel", "cancelad", "cancelada", "cancelado", "cancelou",
+        "reembolso", "reembols", "reembolsad", "reembolsado", "reembolsada",
+        "estorn", "estorno",
+        "troca",
+
+        # devolução/retorno (variações com/sem acento)
+        "devolv", "devol", "devolucao", "devolução",
+        "devolvido", "devolvida",
+        "retorn", "retorno", "retornará", "retornara", "retornou",
+
+        # frases comuns vistas na planilha (estado/descrição)
+        "devolução a caminho", "devolucao a caminho",
+        "a devolução", "a devolucao",
+        "devolvido no dia", "devolvida no dia",
+        "pacote cancelado", "cancelado pelo mercado livre",
+        "entrega foi recusada", "entrega recusada", "recusada",
+        "produto retornou", "retornará para você", "retornara para voce",
+        "arrepend",  # "se arrependeu da compra"
     ]
     if any(keyword in text for keyword in cancel_keywords):
         return "CANCELADO"
@@ -36,11 +64,34 @@ def classify_status_group(estado: str | None, status_desc: str | None) -> str:
     # 3. ENVIADO: produtos entregues/enviados (mas não devolvidos)
     # IMPORTANTE: Esta verificação vem DEPOIS de devoluções para evitar
     # classificar devoluções como "enviado" quando contêm palavras como "entregue"
-    if any(keyword in text for keyword in ["chegou", "entreg", "enviad"]):
+    if any(keyword in text for keyword in [
+        "chegou",
+        "entreg",  # entregue/entrega
+        "enviad",  # enviado/enviada
+        "recebid",  # recebido/recebida (casos comuns do ML)
+        "entrega realizada",
+        "entregue ao destinat", "entregue ao destinatário",
+    ]):
         return "ENVIADO"
     
     # 4. A_ENVIAR: pendências de envio
-    if any(keyword in text for keyword in ["para enviar", "informar", "imprimir"]):
+    if any(keyword in text for keyword in [
+        # fluxo clássico de etiqueta/postagem
+        "para enviar",
+        "informar",
+        "imprimir",
+        "etiqueta",
+        "gerar etiqueta",
+        "pronto para enviar",
+        "preparando",
+        "aguardando envio",
+
+        # frases vistas na planilha
+        "a caminho",  # ainda em trânsito / não entregue
+        "chega ", "chegará", "chegara",  # "Chega segunda-feira..."
+        "venda concretizada",
+        "concretizamos a venda",
+    ]):
         return "A_ENVIAR"
 
     # Default: assume que está pendente de envio
@@ -130,6 +181,22 @@ def build_mercado_livre_dashboard(ml_bytes: bytes, db: Session) -> dict:
             logger.warning(f"Erro ao processar linha do DataFrame: {str(e)}")
             continue
 
+        # Quantidade vendida (coluna G da planilha do ML)
+        # No relatório do ML essa coluna costuma se chamar "Unidades"
+        quantity = (
+            to_float(r.get("Unidades"))
+            or to_float(r.get("Quantidade"))
+            or to_float(r.get("Qtd"))
+        )
+        if quantity is None or quantity <= 0:
+            quantity = 1
+
+        # Normaliza para inteiro quando vier como float (ex.: 3.0)
+        try:
+            quantity = int(quantity)
+        except Exception:
+            quantity = 1
+
         # Verifica se o produto tem SKU
         has_sku = sku and isinstance(sku, str) and sku.strip() != ""
         
@@ -159,7 +226,11 @@ def build_mercado_livre_dashboard(ml_bytes: bytes, db: Session) -> dict:
         elif status_group in ["MEDIACAO", "CANCELADO"]:
             lucro_bruto = None
         else:
-            lucro_bruto = (total - cost) if (total is not None and cost is not None) else None
+            # Lucro considerando quantidade: total - (custo_unitario * quantidade)
+            if total is not None and cost is not None:
+                lucro_bruto = total - (cost * quantity)
+            else:
+                lucro_bruto = None
 
         row = {
             "sku": sku,
@@ -177,6 +248,8 @@ def build_mercado_livre_dashboard(ml_bytes: bytes, db: Session) -> dict:
             "shipping_fees": shipping_fees,
             "total": total,
             "cost": cost,
+            "quantity": quantity,
+            "total_cost": (cost * quantity) if (cost is not None and quantity is not None) else None,
             "ml_listing_id": safe_str(r.get("# de anúncio")) if "# de anúncio" in ml.columns else None,
         }
 

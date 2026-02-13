@@ -63,6 +63,8 @@ export interface MercadoLivreDashboardRow {
   shipping_fees?: number | null;
   total?: number | null;
   cost?: number | null;
+  quantity?: number | null;
+  total_cost?: number | null;
   ml_listing_id?: string | null;
 }
 

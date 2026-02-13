@@ -1,7 +1,7 @@
 // /frontend/src/components/StatusStatistics.tsx
 import React, { useMemo } from 'react';
 import { Card, Row, Col, Statistic, Tag, Progress, theme } from 'antd';
-import { DashboardRow } from '../api/dashboard';
+import { DashboardRow } from '@/api/dashboard';
 import {
   CheckCircleOutlined,
   ClockCircleOutlined,

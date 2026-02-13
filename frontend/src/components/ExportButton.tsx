@@ -2,7 +2,7 @@
 import React from 'react';
 import { Button, Dropdown, MenuProps, message } from 'antd';
 import { DownloadOutlined, FileExcelOutlined, FileTextOutlined } from '@ant-design/icons';
-import { DashboardRow } from '../api/dashboard';
+import { DashboardRow } from '@/api/dashboard';
 // @ts-ignore
 import * as XLSX from 'xlsx';
 
