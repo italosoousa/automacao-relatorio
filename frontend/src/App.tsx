@@ -41,7 +41,7 @@ const App: React.FC = () => (
             }}
           >
             <img
-              src="/IDV_B.stories_Versão05.png"
+              src="/assets/logo-pequena.png"
               alt="B.stories logo"
               style={{
                 height: "48px",
@@ -121,10 +121,11 @@ const App: React.FC = () => (
             }}
           >
             <img
-              src="/IDV_B.stories_Versão01.png"
+              src="/assets/logo-grande.png"
               alt="B.stories footer"
-              style={{ height: "40px", width: "auto", display: "block" }}
+              style={{ height: "60px", width: "auto", maxWidth: "100%", display: "block" }}
             />
+
             <div>
               <strong
                 style={{
