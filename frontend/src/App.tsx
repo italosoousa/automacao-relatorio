@@ -5,6 +5,7 @@ import { BrowserRouter, Routes, Route } from "react-router-dom";
 import { MercadoLivreDashboardPage } from "./pages/MercadoLivreDashboardPage";
 import { RfidDashboardPage } from "./pages/RfidDashboardPage";
 import { SugestaoVendasDashboardPage } from "./pages/SugestaoVendasDashboardPage";
+import { ProductsImportPage } from "./pages/ProductsImportPage";
 import { Navigation } from "./components/Navigation";
 import { bstoriesTheme } from "./theme/antd-bstories-theme";
 import { BStoriesThemeTokens } from "./theme/bstories-tokens";
@@ -16,10 +17,11 @@ const App: React.FC = () => (
     <BrowserRouter>
       <Layout style={{ minHeight: "100vh", display: "flex" }}>
         <SideBar />
-        <Layout style={{ padding: "24px", minHeight: "100vh", flex: 1, marginLeft: 260 }}>
+        <Layout className="bstories-content" style={{ padding: "24px", minHeight: "100vh", flex: 1 }}>
           <Routes>
             <Route path="/" element={<MercadoLivreDashboardPage />} />
             <Route path="/rfid-dashboard" element={<RfidDashboardPage />} />
+            <Route path="/import-products" element={<ProductsImportPage />} />
             <Route
               path="/sugestao-vendas-dashboard"
               element={<SugestaoVendasDashboardPage />}

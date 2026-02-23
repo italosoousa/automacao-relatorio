@@ -191,3 +191,124 @@ code {
     display: none; /* Esconde labels em telas muito pequenas, mostra só ícones */
   }
 }
+
+  /* Sidebar styles */
+  .bstories-sidebar {
+    transition: width 200ms ease, transform 200ms ease;
+  }
+
+  .bstories-sidebar img {
+    max-width: 100%;
+  }
+
+  .bstories-sidebar .sidebar-label {
+    display: inline-block;
+  }
+
+  .bstories-content {
+    transition: margin-left 200ms ease, margin-top 200ms ease;
+  }
+
+  /* Desktop: leave space for sidebar */
+  @media (min-width: 993px) {
+    .bstories-sidebar {
+      width: 260px !important;
+    }
+    .bstories-content {
+      margin-left: 260px !important;
+      margin-top: 0 !important;
+    }
+  }
+
+  /* Tablet: collapsed narrow sidebar showing icons only */
+  @media (max-width: 992px) and (min-width: 769px) {
+    .bstories-sidebar {
+      width: 96px !important;
+      padding: 16px !important;
+      align-items: center;
+    }
+    .bstories-sidebar .sidebar-label {
+      display: none !important;
+    }
+    .bstories-sidebar img[alt="B.stories"] {
+      height: 40px !important;
+    }
+    /* Hide footer logo on tablet to save vertical space */
+    .bstories-sidebar img[alt="B.stories footer"] {
+      display: none !important;
+    }
+    .bstories-content {
+      margin-left: 96px !important;
+    }
+  }
+
+  /* Mobile: convert sidebar to a top bar */
+  @media (max-width: 768px) {
+    .bstories-sidebar {
+      position: fixed !important;
+      top: 0 !important;
+      left: 0 !important;
+      right: 0 !important;
+      height: 72px !important;
+      width: 100% !important;
+      flex-direction: row !important;
+      align-items: center !important;
+      padding: 8px 12px !important;
+      border-right: none !important;
+      border-bottom: 1px solid var(--color-border) !important;
+      z-index: 200 !important;
+      gap: 12px !important;
+    }
+
+    .bstories-sidebar nav {
+      display: flex !important;
+      flex-direction: row !important;
+      gap: 8px !important;
+      width: auto !important;
+    }
+
+    .bstories-sidebar .sidebar-label {
+      display: none !important;
+    }
+
+    /* On mobile hide all logos to maximize usable space */
+    .bstories-sidebar img {
+      display: none !important;
+    }
+
+    .bstories-content {
+      margin-left: 0 !important;
+      margin-top: 72px !important;
+    }
+  }
+
+  /* System title responsive tweaks */
+  .bstories-sidebar .system-title {
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+  .bstories-sidebar .system-subtitle {
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+
+  @media (max-width: 992px) and (min-width: 769px) {
+    /* smaller title on tablet */
+    .bstories-sidebar .system-title {
+      font-size: 14px !important;
+      font-weight: 700 !important;
+    }
+    .bstories-sidebar .system-subtitle {
+      font-size: 11px !important;
+    }
+  }
+
+  @media (max-width: 768px) {
+    /* hide the name/subtitle on small mobile to prevent layout issues */
+    .bstories-sidebar .system-title,
+    .bstories-sidebar .system-subtitle {
+      display: none !important;
+    }
+  }
