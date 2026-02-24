@@ -165,258 +165,100 @@ async def create_products_bulk(
 
 @router.post("/import-from-excel", status_code=status.HTTP_200_OK)
 async def import_products_from_excel(
-    file: UploadFile = File(..., description="Planilha Excel (.xlsx) com produtos"),
-    update_existing: bool = False,
+    file: UploadFile = File(..., description="Planilha Excel com código de barras (coluna A) e preço (coluna B)"),
     db: Session = Depends(get_db)
 ):
     """
-    Importa produtos de uma planilha Excel.
+    Atualiza preços de produtos a partir de uma planilha Excel.
     
-    A planilha deve ter as seguintes colunas:
-    - CODIGO_LINX (obrigatório)
-    - DESCRICAO (opcional)
-    - SKU (opcional)
-    - CODIGO_BARRAS (opcional)
-    - PRECO_CUSTO (opcional)
+    A planilha deve ter exatamente 2 colunas:
+    - Coluna A: Código de Barras
+    - Coluna B: Preço Novo
     
-    Parâmetros:
-    - update_existing: Se True, atualiza produtos existentes. Se False, ignora duplicados.
+    Retorna:
+    - alterados: Número de produtos que tiveram o preço atualizado
+    - nao_encontrados: Número de códigos de barras não encontrados
+    - corretos: Número de produtos que já tinham o preço correto
     """
     try:
-        # Ler arquivo Excel
         file_bytes = await file.read()
         
         try:
-            df = pd.read_excel(BytesIO(file_bytes), engine="openpyxl")
+            df = pd.read_excel(BytesIO(file_bytes), engine="openpyxl", header=None, usecols=[0, 1])
         except Exception as e:
             raise HTTPException(
                 status_code=status.HTTP_400_BAD_REQUEST,
                 detail=f"Erro ao ler arquivo Excel: {str(e)}"
             )
         
-        # Normalizar nomes das colunas (case insensitive, remove espaços)
-        # Converter todos os nomes de colunas para string primeiro
-        df.columns = [str(col).strip().upper() for col in df.columns]
-        
-        # Verificar coluna obrigatória
-        if "CODIGO_LINX" not in df.columns:
-            # Garantir que todas as colunas são strings para o join
-            colunas_str = [str(col) for col in df.columns.tolist()]
+        if df.empty:
             raise HTTPException(
                 status_code=status.HTTP_400_BAD_REQUEST,
-                detail="Coluna 'CODIGO_LINX' não encontrada na planilha. Colunas disponíveis: " + ", ".join(colunas_str)
+                detail="A planilha está vazia"
             )
         
-        # Mapear colunas (case insensitive)
-        column_mapping = {
-            "CODIGO_LINX": "codigo_linx",
-            "DESCRICAO": "descricao",
-            "SKU": "sku",
-            "CODIGO_BARRAS": "codigo_barras",
-            "PRECO_CUSTO": "preco_custo",
-            "PRECO": "preco_custo",  # Aceita também "PRECO"
-            "CUSTO": "preco_custo",  # Aceita também "CUSTO"
-        }
+        # Renomear colunas para clareza
+        df.columns = ["codigo_barras", "preco_novo"]
         
-        # Preparar dados
-        created_count = 0
-        updated_count = 0
-        skipped_count = 0
-        errors = []
+        # Remover linhas com código de barras ou preço vazios
+        df = df.dropna(subset=["codigo_barras", "preco_novo"])
         
-        # Processar em lotes para melhor performance e tratamento de erros
-        BATCH_SIZE = 50
-        products_to_add = []
+        alterados = 0
+        nao_encontrados = 0
+        corretos = 0
         
         for index, row in df.iterrows():
             try:
-                # Processar CODIGO_LINX com tratamento seguro de tipos
-                codigo_linx_raw = row.get("CODIGO_LINX")
-                
-                # Converter para string de forma segura (trata float, int, NaN, etc)
-                codigo_linx = safe_str(codigo_linx_raw)
-                
-                if not codigo_linx:
-                    skipped_count += 1
-                    continue
-                
-                # Garantir que não tem .0 no final (normalização extra)
-                if codigo_linx.endswith('.0') and codigo_linx.replace('.0', '').replace('-', '').isdigit():
-                    codigo_linx = codigo_linx[:-2]
-                
-                # Buscar produto existente (também tenta com .0 caso exista no banco)
-                existing = db.query(Product).filter(Product.codigo_linx == codigo_linx).first()
-                if not existing:
-                    # Tenta também com .0 caso o banco tenha salvo assim
-                    codigo_linx_with_dot = codigo_linx + '.0'
-                    existing = db.query(Product).filter(Product.codigo_linx == codigo_linx_with_dot).first()
-                    if existing:
-                        # Se encontrou com .0, atualiza para sem .0
-                        existing.codigo_linx = codigo_linx
-                
-                # Preparar dados do produto usando safe_str para todos os campos de texto
-                # codigo_barras pode vir como float do Excel (ex: 3605531812213.0)
-                codigo_barras_raw = row.get("CODIGO_BARRAS")
-                codigo_barras = safe_str(codigo_barras_raw)
-                # Garantir que código de barras não tenha .0 no final
-                if codigo_barras and codigo_barras.endswith('.0') and codigo_barras.replace('.0', '').isdigit():
+                # Normalizar código de barras
+                codigo_barras = safe_str(row["codigo_barras"]).strip()
+                if codigo_barras.endswith('.0') and codigo_barras.replace('.0', '').isdigit():
                     codigo_barras = codigo_barras[:-2]
                 
-                product_data = {
-                    "codigo_linx": codigo_linx,
-                    "descricao": safe_str(row.get("DESCRICAO")),
-                    "sku": safe_str(row.get("SKU")),
-                    "codigo_barras": codigo_barras,
-                }
-                
-                # Processar preço (pode estar em PRECO_CUSTO, PRECO ou CUSTO)
-                preco = None
-                for col in ["PRECO_CUSTO", "PRECO", "CUSTO"]:
-                    if col in df.columns:
-                        valor = row.get(col)
-                        if pd.notna(valor):
-                            try:
-                                # Converte para string primeiro, depois para Decimal
-                                if isinstance(valor, (int, float)):
-                                    preco = Decimal(str(valor).replace(",", "."))
-                                else:
-                                    preco = Decimal(str(valor).replace(",", "."))
-                                break
-                            except (ValueError, TypeError, Exception):
-                                pass
-                
-                product_data["preco_custo"] = preco
-                
-                # Remover valores vazios e garantir que strings são realmente strings
-                cleaned_data = {}
-                for k, v in product_data.items():
-                    if v is None:
-                        cleaned_data[k] = None
-                    elif k == "preco_custo":
-                        # Preço já é Decimal ou None
-                        cleaned_data[k] = v
-                    elif isinstance(v, str):
-                        # Se já é string, mantém
-                        cleaned_data[k] = v if v.strip() else None
-                    else:
-                        # Converte para string se necessário
-                        cleaned_data[k] = safe_str(v)
-                
-                product_data = cleaned_data
-                
-                # Garantir que codigo_linx é sempre string (não pode ser None)
-                if not product_data.get("codigo_linx"):
-                    skipped_count += 1
+                if not codigo_barras:
+                    nao_encontrados += 1
                     continue
                 
-                if existing:
-                    if update_existing:
-                        # Atualizar produto existente
-                        try:
-                            for key, value in product_data.items():
-                                if key != "codigo_linx" and value is not None:
-                                    setattr(existing, key, value)
-                            # Commit imediato da atualização
-                            db.commit()
-                            updated_count += 1
-                        except Exception as update_error:
-                            db.rollback()
-                            errors.append(f"Linha {index + 2}: Erro ao atualizar produto {codigo_linx} - {str(update_error)}")
-                            continue
-                    else:
-                        skipped_count += 1
-                else:
-                    # Adicionar à lista para criar em lote
-                    products_to_add.append((index, product_data, codigo_linx))
-                    
-            except Exception as e:
-                error_msg = f"Linha {index + 2}: {str(e)}"
-                # Adicionar mais contexto se possível
+                # Converter preço
                 try:
-                    codigo_linx_info = f" (CODIGO_LINX: {row.get('CODIGO_LINX', 'N/A')})"
-                    error_msg += codigo_linx_info
-                except:
-                    pass
-                errors.append(error_msg)
+                    preco_novo = Decimal(str(row["preco_novo"]).replace(",", "."))
+                except (ValueError, TypeError):
+                    nao_encontrados += 1
+                    continue
+                
+                # Buscar produto
+                produto = db.query(Product).filter(
+                    Product.codigo_barras == codigo_barras
+                ).first()
+                
+                if not produto:
+                    nao_encontrados += 1
+                    continue
+                
+                # Comparar e atualizar preço
+                if produto.preco_custo == preco_novo:
+                    corretos += 1
+                else:
+                    produto.preco_custo = preco_novo
+                    alterados += 1
+                    
+            except Exception:
+                nao_encontrados += 1
                 continue
         
-        # Processar produtos em lotes
-        for batch_start in range(0, len(products_to_add), BATCH_SIZE):
-            batch = products_to_add[batch_start:batch_start + BATCH_SIZE]
-            batch_created = 0
-            
-            for index, product_data, codigo_linx in batch:
-                try:
-                    db_product = Product(**product_data)
-                    db.add(db_product)
-                    batch_created += 1
-                except Exception as create_error:
-                    error_msg = str(create_error)
-                    # Se for erro de duplicata
-                    if "Duplicate entry" in error_msg or "1062" in error_msg or "UNIQUE constraint" in error_msg:
-                        # Verifica se realmente existe
-                        existing_check = db.query(Product).filter(Product.codigo_linx == codigo_linx).first()
-                        if existing_check:
-                            errors.append(f"Linha {index + 2}: Produto com CODIGO_LINX '{codigo_linx}' já existe (duplicata)")
-                            skipped_count += 1
-                        else:
-                            errors.append(f"Linha {index + 2}: Erro de duplicata ao criar produto '{codigo_linx}'")
-                            skipped_count += 1
-                    else:
-                        errors.append(f"Linha {index + 2}: Erro ao criar produto '{codigo_linx}' - {error_msg}")
-            
-            # Commit do lote
-            if batch_created > 0:
-                try:
-                    db.commit()
-                    created_count += batch_created
-                except Exception as commit_error:
-                    db.rollback()
-                    error_msg = str(commit_error)
-                    if "Duplicate entry" in error_msg or "1062" in error_msg:
-                        # Se houver duplicata no commit, processa um por um
-                        for idx, pd_data, clx in batch:
-                            try:
-                                existing = db.query(Product).filter(Product.codigo_linx == clx).first()
-                                if not existing:
-                                    db_product = Product(**pd_data)
-                                    db.add(db_product)
-                                    db.commit()
-                                    created_count += 1
-                                else:
-                                    skipped_count += 1
-                            except Exception:
-                                db.rollback()
-                                skipped_count += 1
-        
-        # Atualizações já foram commitadas individualmente acima
-        
-        # Refresh dos produtos criados (não é estritamente necessário, mas ajuda)
-        # Removido para evitar problemas com tipos - o commit já persiste os dados
+        # Commit único ao final
+        db.commit()
         
         return {
-            "message": "Importação concluída",
-            "created": created_count,
-            "updated": updated_count,
-            "skipped": skipped_count,
-            "errors": errors if errors else None,
-            "total_rows": len(df)
+            "alterados": alterados,
+            "nao_encontrados": nao_encontrados,
+            "corretos": corretos,
+            "total_processados": len(df)
         }
         
-    except pd.errors.EmptyDataError:
-        raise HTTPException(
-            status_code=status.HTTP_400_BAD_REQUEST,
-            detail="A planilha está vazia"
-        )
     except HTTPException:
-        # Re-raise HTTPExceptions (já formatadas)
         raise
     except Exception as e:
-        # Log do erro completo para debug
-        import traceback
-        error_trace = traceback.format_exc()
-        logger.error(f"Erro ao processar planilha: {str(e)}\n{error_trace}")
-        
+        logger.error(f"Erro ao processar planilha de preços: {str(e)}")
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail=f"Erro ao processar planilha: {str(e)}"

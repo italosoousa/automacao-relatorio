@@ -51,15 +51,15 @@ export const ProductsImportPage: React.FC = () => {
       const form = new FormData();
       form.append('file', file);
 
-      const resp = await axios.post(`${API_BASE_URL}/api/products/import-from-excel?update_existing=true`, form, {
-        timeout: 120000,
+      const resp = await axios.post(`${API_BASE_URL}/api/products/import-from-excel`, form, {
+        timeout: 0,
       });
 
       const data = resp.data;
 
       notification.success({
-        message: 'Importação concluída',
-        description: `${data.created ?? 0} criados, ${data.updated ?? 0} atualizados, ${data.skipped ?? 0} ignorados`,
+        message: 'Atualização de preços concluída',
+        description: `${data.alterados ?? 0} alterados, ${data.corretos ?? 0} já estavam corretos, ${data.nao_encontrados ?? 0} não encontrados`,
       });
       setResult({ success: true, data });
     } catch (err: any) {
@@ -79,7 +79,7 @@ export const ProductsImportPage: React.FC = () => {
       <Space direction="vertical" size="large" style={{ width: '100%' }}>
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: 16 }}>
           <Title level={2} style={{ margin: 0, fontSize: 'clamp(1.2rem, 4vw, 1.75rem)', color: BStoriesThemeTokens.primary }}>
-            📥 Importar / Atualizar Produtos
+            � Atualizar Preços de Produtos
           </Title>
         </div>
 
@@ -87,8 +87,8 @@ export const ProductsImportPage: React.FC = () => {
           <FileUploadSingle
             onGenerate={handleGenerate}
             loading={loading}
-            fileLabel="Planilha de Produtos"
-            buttonText="Importar e Atualizar"
+            fileLabel="Planilha de Preços (Coluna A: Código de Barras, Coluna B: Preço)"
+            buttonText="Atualizar Preços"
           />
         </Card>
 
@@ -96,7 +96,7 @@ export const ProductsImportPage: React.FC = () => {
           <div style={{ marginTop: 16, maxWidth: 920 }}>
             <Alert
               type="error"
-              message="Importação retornou erro"
+              message="Erro ao atualizar preços"
               description={
                 <pre style={{ whiteSpace: 'pre-wrap', margin: 0 }}>{JSON.stringify(result.detail || result.data, null, 2)}</pre>
               }
@@ -104,29 +104,23 @@ export const ProductsImportPage: React.FC = () => {
           </div>
         )}
 
-        {loading && <Spin spinning tip="Processando importação..." />}
+        {loading && <Spin spinning tip="Atualizando preços..." />}
 
         {!loading && !result && (
           <Result
-            icon={<Title style={{ fontSize: 48 }}>📥</Title>}
+            icon={<Title style={{ fontSize: 48 }}>💰</Title>}
             title="Aguardando planilha"
-            subTitle="Faça o upload da planilha de produtos e clique em 'Importar e Atualizar' para sincronizar com o banco de dados."
+            subTitle="Faça o upload da planilha com os preços (código de barras na coluna A e preço na coluna B) e clique em 'Atualizar Preços'."
           />
         )}
 
         {result && result.success === true && (
           <div style={{ marginTop: 16, maxWidth: 920 }}>
-            <Card title="Resumo da Importação">
-              <div>Linhas processadas: {result.data?.total_rows ?? '-'}</div>
-              <div>Criados: {result.data?.created ?? 0}</div>
-              <div>Atualizados: {result.data?.updated ?? 0}</div>
-              <div>Ignorados: {result.data?.skipped ?? 0}</div>
-              {result.data?.errors && (
-                <div style={{ marginTop: 12 }}>
-                  <strong>Erros:</strong>
-                  <pre style={{ whiteSpace: 'pre-wrap' }}>{JSON.stringify(result.data.errors, null, 2)}</pre>
-                </div>
-              )}
+            <Card title="Resumo da Atualização">
+              <div>Total processados: {result.data?.total_processados ?? '-'}</div>
+              <div style={{ color: '#52c41a', fontWeight: 'bold' }}>✅ Alterados: {result.data?.alterados ?? 0}</div>
+              <div style={{ color: '#1890ff', fontWeight: 'bold' }}>ℹ️ Já estavam corretos: {result.data?.corretos ?? 0}</div>
+              <div style={{ color: '#faad14', fontWeight: 'bold' }}>⚠️ Não encontrados: {result.data?.nao_encontrados ?? 0}</div>
             </Card>
           </div>
         )}
