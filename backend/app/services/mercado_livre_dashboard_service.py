@@ -11,288 +11,151 @@ logger = logging.getLogger(__name__)
 def classify_status_group(estado: str | None, status_desc: str | None) -> str:
     """
     Classifica o status do produto em grupos.
-    Ordem de verificação é importante: casos mais específicos primeiro.
     """
     text = f"{estado or ''} {status_desc or ''}".lower()
     
-    # 1. MEDIACAO: mediações, reclamações e disputas
-    # Verifica ANTES de cancelado para evitar que mediações sejam classificadas como canceladas
-    # Exemplos: "em mediação", "reclamação", "disputa", "mediação aberta"
-    mediacao_keywords = [
-        # termos gerais
-        "media", "mediacao", "mediação",
-        "reclama", "reclamacao", "reclamação",
-        "disputa",
-
-        # frases comuns vistas na planilha (estado/descrição)
-        "reclamação encerr", "reclamacao encerr",
-        "mediação finaliz", "mediacao finaliz",
-        "devolução habilitada", "devolucao habilitada",
-        "não poderá reiniciar", "nao podera reiniciar",
-        "não sera possivel abrir", "não será possível abrir",
-    ]
-    if any(keyword in text for keyword in mediacao_keywords):
+    # MEDIACAO
+    if any(kw in text for kw in ["media", "reclama", "disputa"]):
         return "MEDIACAO"
     
-    # 2. CANCELADO: cancelamentos, reembolsos e devoluções
-    # Verifica devoluções ANTES de "entregue/enviado" para evitar falsos positivos
-    # Exemplos: "devolvido", "devolução", "retorno", "reembolso", "cancelado"
-    cancel_keywords = [
-        # termos gerais
-        "cancel", "cancelad", "cancelada", "cancelado", "cancelou",
-        "reembolso", "reembols", "reembolsad", "reembolsado", "reembolsada",
-        "estorn", "estorno",
-        "troca",
-
-        # devolução/retorno (variações com/sem acento)
-        "devolv", "devol", "devolucao", "devolução",
-        "devolvido", "devolvida",
-        "retorn", "retorno", "retornará", "retornara", "retornou",
-
-        # frases comuns vistas na planilha (estado/descrição)
-        "devolução a caminho", "devolucao a caminho",
-        "a devolução", "a devolucao",
-        "devolvido no dia", "devolvida no dia",
-        "pacote cancelado", "cancelado pelo mercado livre",
-        "entrega foi recusada", "entrega recusada", "recusada",
-        "produto retornou", "retornará para você", "retornara para voce",
-        "arrepend",  # "se arrependeu da compra"
-    ]
-    if any(keyword in text for keyword in cancel_keywords):
+    # CANCELADO
+    if any(kw in text for kw in ["cancel", "reembolso", "estorno", "devolv", "retorn", "arrependeu", "recusada"]):
         return "CANCELADO"
     
-    # 3. ENVIADO: produtos entregues/enviados (mas não devolvidos)
-    # IMPORTANTE: Esta verificação vem DEPOIS de devoluções para evitar
-    # classificar devoluções como "enviado" quando contêm palavras como "entregue"
-    if any(keyword in text for keyword in [
-        "chegou",
-        "entreg",  # entregue/entrega
-        "enviad",  # enviado/enviada
-        "recebid",  # recebido/recebida (casos comuns do ML)
-        "entrega realizada",
-        "entregue ao destinat", "entregue ao destinatário",
-    ]):
+    # ENVIADO
+    if any(kw in text for kw in ["entreg", "enviad", "recebid", "chegou"]):
         return "ENVIADO"
     
-    # 4. A_ENVIAR: pendências de envio
-    if any(keyword in text for keyword in [
-        # fluxo clássico de etiqueta/postagem
-        "para enviar",
-        "informar",
-        "imprimir",
-        "etiqueta",
-        "gerar etiqueta",
-        "pronto para enviar",
-        "preparando",
-        "aguardando envio",
-
-        # frases vistas na planilha
-        "a caminho",  # ainda em trânsito / não entregue
-        "chega ", "chegará", "chegara",  # "Chega segunda-feira..."
-        "venda concretizada",
-        "concretizamos a venda",
-    ]):
-        return "A_ENVIAR"
-
-    # Default: assume que está pendente de envio
+    # A_ENVIAR (padrão)
     return "A_ENVIAR"
 
 
 def build_mercado_livre_dashboard(ml_bytes: bytes, db: Session) -> dict:
     """
     Gera dashboard do Mercado Livre.
-    
-    Busca produtos diretamente do banco de dados usando o SKU da planilha do ML.
+    Lê planilha do ML, busca produtos no banco pelo SKU e calcula lucro.
     """
-    # 1) Lê ML (header real na linha 6 do Excel -> header=5)
     try:
+        # Lê o Excel (header na linha 6, índice 5)
         ml = pd.read_excel(BytesIO(ml_bytes), header=5, engine="openpyxl")
     except Exception as e:
         logger.error(f"Erro ao ler arquivo Excel: {str(e)}")
-        raise ValueError(f"Erro ao ler arquivo Excel. Verifique se o arquivo está no formato correto: {str(e)}")
-
-    # Verifica se a coluna SKU existe
-    if "SKU" not in ml.columns:
-        available_cols = ", ".join(ml.columns.tolist())
-        error_msg = f"Coluna 'SKU' não encontrada na planilha. Colunas disponíveis: {available_cols}"
-        logger.error(error_msg)
-        raise KeyError(error_msg)
-
-    # 2) Normaliza SKUs do ML (trata valores None/NaN)
-    try:
-        ml["__sku"] = ml["SKU"].apply(lambda x: norm_sku(x) if pd.notna(x) else None)
-    except Exception as e:
-        logger.error(f"Erro ao normalizar SKUs: {str(e)}")
-        raise ValueError(f"Erro ao processar coluna SKU: {str(e)}")
-
-    # 3) Busca produtos do banco de dados por SKU
-    try:
-        ml_skus = ml["__sku"].dropna().unique().tolist()
-        products_dict = get_products_dict_by_sku(db, ml_skus)
-    except Exception as e:
-        logger.error(f"Erro ao buscar produtos do banco: {str(e)}")
-        # Se falhar ao buscar do banco, continua com dicionário vazio
-        products_dict = {}
-
-    # Verifica se o DataFrame está vazio
+        raise ValueError(f"Erro ao ler arquivo Excel: {str(e)}")
+    
     if ml.empty:
-        logger.warning("DataFrame do Mercado Livre está vazio")
+        logger.warning("Planilha do Mercado Livre está vazia")
         return {
             "rows": [],
-            "summary": {
-                "total_lucro": 0.0,
-                "total_itens": 0,
-                "skus_sem_cadastro": 0,
-            },
-            "filter_options": {
-                "states": [],
-                "status_group": [],
-            },
+            "summary": {"total_lucro": 0.0, "total_itens": 0, "skus_sem_cadastro": 0},
+            "filter_options": {"states": [], "status_group": []},
             "missing_skus": [],
         }
-
-    # 5) Monta linhas no formato do frontend
+    
+    # Verifica se coluna SKU existe
+    if "SKU" not in ml.columns:
+        raise KeyError(f"Coluna 'SKU' não encontrada. Colunas disponíveis: {', '.join(ml.columns.tolist())}")
+    
+    # Normaliza SKUs
+    ml["__sku_normalized"] = ml["SKU"].apply(lambda x: norm_sku(x) if pd.notna(x) else None)
+    
+    # Busca todos os produtos do banco
+    ml_skus = ml["__sku_normalized"].dropna().unique().tolist()
+    products_dict = get_products_dict_by_sku(db, ml_skus) if ml_skus else {}
+    
     rows = []
     missing_skus = []
-
-    for _, r in ml.iterrows():
-        # Acessa colunas do DataFrame corretamente
+    
+    for _, row in ml.iterrows():
         try:
-            # Usa .get() com valor padrão None para colunas que podem não existir
-            sku = safe_str(r.get("__sku")) if "__sku" in ml.columns else None
+            # SKU
+            sku = safe_str(row.get("SKU"))
+            sku_normalized = row.get("__sku_normalized")
+            has_sku = sku and sku.strip() != ""
             
-            # Tenta diferentes nomes de colunas para descrição
+            # Descrição do produto
             descricao = None
-            for col_name in ["Título do anúncio", "Titulo do anuncio", "Variação", "Variacao"]:
-                if col_name in ml.columns:
-                    descricao = safe_str(r.get(col_name))
-                    if descricao:
+            for col in ["Título do anúncio", "Titulo do anuncio"]:
+                if col in ml.columns:
+                    val = safe_str(row.get(col))
+                    if val:
+                        descricao = val
                         break
             descricao = descricao or "—"
             
-            estado = safe_str(r.get("Estado")) if "Estado" in ml.columns else None
-            status_desc = safe_str(r.get("Descrição do status")) if "Descrição do status" in ml.columns else None
-
-            revenue_product = to_float(r.get("Receita por produtos (BRL)")) if "Receita por produtos (BRL)" in ml.columns else None
-            fee_taxes = to_float(r.get("Tarifa de venda e impostos (BRL)")) if "Tarifa de venda e impostos (BRL)" in ml.columns else None
-            shipping_fees = to_float(r.get("Tarifas de envio (BRL)")) if "Tarifas de envio (BRL)" in ml.columns else None
-            total = to_float(r.get("Total (BRL)")) if "Total (BRL)" in ml.columns else None
-        except Exception as e:
-            logger.warning(f"Erro ao processar linha do DataFrame: {str(e)}")
-            continue
-
-        # Quantidade vendida (coluna G da planilha do ML)
-        # No relatório do ML essa coluna costuma se chamar "Unidades"
-        quantity = (
-            to_float(r.get("Unidades"))
-            or to_float(r.get("Quantidade"))
-            or to_float(r.get("Qtd"))
-        )
-        if quantity is None or quantity <= 0:
-            quantity = 1
-
-        # Normaliza para inteiro quando vier como float (ex.: 3.0)
-        try:
-            quantity = int(quantity)
-        except Exception:
-            quantity = 1
-
-        # Verifica se o produto tem SKU
-        has_sku = sku and isinstance(sku, str) and sku.strip() != ""
-        
-        # Busca custo do banco de dados usando SKU (só se tiver SKU)
-        cost = None
-        if has_sku:
-            try:
-                normalized_sku = norm_sku(sku)
-                if normalized_sku:
-                    product = products_dict.get(normalized_sku)
-                    if product and product.preco_custo is not None:
-                        cost = float(product.preco_custo)
-            except Exception as e:
-                logger.warning(f"Erro ao buscar custo para SKU {sku}: {str(e)}")
-                cost = None
-
-        # Classifica o status primeiro
-        status_group = classify_status_group(estado, status_desc)
-
-        # Regra do lucro:
-        # 1. Produtos SEM SKU: lucro_bruto = None (não identificados)
-        # 2. Produtos com status MEDIACAO ou CANCELADO: lucro_bruto = None
-        # 3. Para os demais: valor da venda do produto - valor de custo
-        if not has_sku:
-            # Produto sem SKU: não calcula lucro e vai para produtos não identificados
+            # Estado e Status
+            estado = safe_str(row.get("Estado"))
+            status_desc = safe_str(row.get("Descrição do status"))
+            status_group = classify_status_group(estado, status_desc)
+            
+            # Valores financeiros
+            revenue_product = to_float(row.get("Receita por produtos (BRL)")) or 0.0
+            fee_taxes = to_float(row.get("Tarifa de venda e impostos (BRL)")) or 0.0
+            shipping_fees = to_float(row.get("Tarifas de envio (BRL)")) or 0.0
+            total = to_float(row.get("Total (BRL)")) or 0.0
+            
+            # Quantidade
+            quantity = to_float(row.get("Unidades")) or to_float(row.get("Quantidade")) or 1.0
+            quantity = int(quantity) if quantity > 0 else 1
+            
+            # Busca custo do banco
+            cost = None
+            if has_sku and sku_normalized:
+                product = products_dict.get(sku_normalized)
+                if product and product.preco_custo:
+                    cost = float(product.preco_custo)
+            
+            # Calcula lucro bruto
             lucro_bruto = None
-        elif status_group in ["MEDIACAO", "CANCELADO"]:
-            lucro_bruto = None
-        else:
-            # Lucro considerando quantidade: total - (custo_unitario * quantidade)
-            if total is not None and cost is not None:
+            if has_sku and cost is not None and status_group not in ["MEDIACAO", "CANCELADO"]:
                 lucro_bruto = total - (cost * quantity)
-            else:
-                lucro_bruto = None
-
-        row = {
-            "sku": sku,
-            "descricao": descricao or "—",
-            "estado": estado,
-            "lucro_bruto": lucro_bruto,
-            "status_group": status_group,
-
-            # modal:
-            "sale_number": safe_str(r.get("N.º de venda")) if "N.º de venda" in ml.columns else None,
-            "sale_date": safe_str(r.get("Data da venda")) if "Data da venda" in ml.columns else None,  # mantém "humano", seu modal já trata
-            "status_description": status_desc,
-            "revenue_product": revenue_product,
-            "fee_taxes": fee_taxes,
-            "shipping_fees": shipping_fees,
-            "total": total,
-            "cost": cost,
-            "quantity": quantity,
-            "total_cost": (cost * quantity) if (cost is not None and quantity is not None) else None,
-            "ml_listing_id": safe_str(r.get("# de anúncio")) if "# de anúncio" in ml.columns else None,
-        }
-
-        rows.append(row)
-
-        # Adiciona à lista de produtos não identificados se:
-        # 1. Não tem SKU, OU
-        # 2. Tem SKU mas não tem custo cadastrado no banco
-        if not has_sku:
-            missing_skus.append({
-                "sku": None,  # Sem SKU
-                "descricao": row["descricao"],
-                "estado": estado
-            })
-        elif has_sku and cost is None:
-            missing_skus.append({
+            
+            # Monta linha
+            row_data = {
                 "sku": sku,
-                "descricao": row["descricao"],
-                "estado": estado
-            })
-
-    # 7) Summary
+                "descricao": descricao,
+                "estado": estado or "—",
+                "lucro_bruto": lucro_bruto,
+                "status_group": status_group,
+                "sale_number": safe_str(row.get("N.º de venda")),
+                "sale_date": safe_str(row.get("Data da venda")),
+                "status_description": status_desc,
+                "revenue_product": revenue_product,
+                "fee_taxes": fee_taxes,
+                "shipping_fees": shipping_fees,
+                "total": total,
+                "cost": cost,
+                "quantity": quantity,
+                "total_cost": (cost * quantity) if cost else None,
+                "ml_listing_id": safe_str(row.get("# de anúncio")),
+            }
+            
+            rows.append(row_data)
+            
+            # Registra produtos sem cadastro
+            if not has_sku or (has_sku and cost is None):
+                missing_skus.append({
+                    "sku": sku if has_sku else None,
+                    "descricao": descricao,
+                    "estado": estado
+                })
+                
+        except Exception as e:
+            logger.warning(f"Erro ao processar linha: {str(e)}")
+            continue
+    
+    # Calcula summary
     total_itens = len(rows)
     skus_sem_cadastro = len(missing_skus)
-
-    # Calcula o lucro total apenas para produtos que:
-    # 1. Têm SKU (produtos identificados)
-    # 2. Não são MEDIACAO ou CANCELADO
-    # 3. Têm lucro_bruto calculado (não None)
-    total_lucro = 0.0
-    for x in rows:
-        # Só inclui no cálculo se:
-        # - Tem SKU (produto identificado)
-        # - Lucro não é None
-        # - Status não é MEDIACAO ou CANCELADO
-        has_sku = x["sku"] and str(x["sku"]).strip() != ""
-        if has_sku and x["lucro_bruto"] is not None and x["status_group"] not in ["MEDIACAO", "CANCELADO"]:
-            total_lucro += float(x["lucro_bruto"])
-
-    # 8) Filter options (listas únicas e ordenadas)
-    states = sorted({(x["estado"] or "Indefinido") for x in rows})
-    status_groups = sorted({x["status_group"] for x in rows})
-
+    total_lucro = sum(
+        float(r["lucro_bruto"]) 
+        for r in rows 
+        if r["lucro_bruto"] is not None
+    )
+    
+    # Filter options
+    states = sorted({(r["estado"] or "Indefinido") for r in rows})
+    status_groups = sorted({r["status_group"] for r in rows})
+    
     return {
         "rows": rows,
         "summary": {
@@ -306,3 +169,4 @@ def build_mercado_livre_dashboard(ml_bytes: bytes, db: Session) -> dict:
         },
         "missing_skus": missing_skus,
     }
+
