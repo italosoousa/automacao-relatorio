@@ -1,7 +1,7 @@
 from fastapi import APIRouter, Depends, HTTPException, status
 from sqlalchemy.orm import Session
-from sqlalchemy.sql import func
 from typing import List, Optional
+from datetime import datetime, timezone
 from app.database import get_db
 from app.models.retirada_loja import RetiradaLoja, RetiradaLojaItem
 from app.schemas.retirada_loja import (
@@ -152,7 +152,7 @@ async def aprovar_retirada(
 
     retirada.status = "aprovado"
     retirada.aprovado_por = payload.aprovado_por
-    retirada.aprovado_em = func.now()
+    retirada.aprovado_em = datetime.now(timezone.utc)
 
     db.commit()
     db.refresh(retirada)

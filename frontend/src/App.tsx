@@ -1,6 +1,6 @@
 // /frontend/src/App.tsx
 import React from "react";
-import { ConfigProvider, Layout } from "antd";
+import { App as AntdApp, ConfigProvider, Layout } from "antd";
 import { BrowserRouter, Routes, Route } from "react-router-dom";
 import { MercadoLivreDashboardPage } from "./pages/MercadoLivreDashboardPage";
 import { RfidDashboardPage } from "./pages/RfidDashboardPage";
@@ -16,6 +16,7 @@ import SideBar from "./components/SideBar";
 
 const App: React.FC = () => (
   <ConfigProvider theme={bstoriesTheme}>
+    <AntdApp>
     <BrowserRouter>
       <Layout style={{ minHeight: "100vh", display: "flex" }}>
         <SideBar />
@@ -34,6 +35,7 @@ const App: React.FC = () => (
         </Layout>
       </Layout>
     </BrowserRouter>
+    </AntdApp>
   </ConfigProvider>
 );
 

@@ -6,7 +6,6 @@ import {
   Tag,
   Button,
   Space,
-  Drawer,
   Modal,
   Input,
   Form,
@@ -378,16 +377,35 @@ export const AprovacaoRetiradaPage: React.FC = () => {
       title: "Cód. Barras",
       dataIndex: "codigo_barras",
       key: "codigo_barras",
-      render: (v: string | null) => (
-        <Text code style={{ fontSize: 11 }}>
-          {v ?? "—"}
-        </Text>
-      ),
+      width: 180,
+      render: (v: string | null) =>
+        v ? (
+          <span
+            style={{
+              display: "inline-block",
+              fontFamily: "'Courier New', Courier, monospace",
+              fontSize: 13,
+              fontWeight: 600,
+              letterSpacing: "0.06em",
+              background: BStoriesThemeTokens.backgroundSecondary,
+              border: `1px solid ${BStoriesThemeTokens.border}`,
+              borderRadius: 6,
+              padding: "3px 10px",
+              color: BStoriesThemeTokens.textPrimary,
+              whiteSpace: "nowrap",
+            }}
+          >
+            {v}
+          </span>
+        ) : (
+          <Text type="secondary">—</Text>
+        ),
     },
     {
       title: "Cód. Interno",
       dataIndex: "codigo_linx",
       key: "codigo_linx",
+      width: 110,
       render: (v: string | null) =>
         v ? <Text strong>{v}</Text> : <Text type="secondary">—</Text>,
     },
@@ -396,7 +414,9 @@ export const AprovacaoRetiradaPage: React.FC = () => {
       dataIndex: "descricao",
       key: "descricao",
       render: (v: string | null) =>
-        v ? <Text>{v}</Text> : (
+        v ? (
+          <Text>{v}</Text>
+        ) : (
           <Space>
             <ExclamationCircleOutlined style={{ color: BStoriesThemeTokens.error }} />
             <Text type="danger">Não encontrado</Text>
@@ -407,15 +427,18 @@ export const AprovacaoRetiradaPage: React.FC = () => {
       title: "Preço Custo",
       dataIndex: "preco_custo",
       key: "preco_custo",
+      width: 130,
       align: "right" as const,
-      render: (v: number | null) =>
-        v != null ? (
+      render: (v: number | string | null) => {
+        const num = v != null ? Number(v) : null;
+        return num != null && !isNaN(num) ? (
           <Text strong>
-            {v.toLocaleString("pt-BR", { style: "currency", currency: "BRL" })}
+            {num.toLocaleString("pt-BR", { style: "currency", currency: "BRL" })}
           </Text>
         ) : (
           <Text type="secondary">—</Text>
-        ),
+        );
+      },
     },
   ];
 
@@ -497,7 +520,7 @@ export const AprovacaoRetiradaPage: React.FC = () => {
         )}
 
         {/* Tabela com abas */}
-        <Card bodyStyle={{ padding: 0 }}>
+        <Card styles={{ body: { padding: 0 } }}>
           <Tabs
             activeKey={activeTab}
             onChange={(k) => setActiveTab(k as typeof activeTab)}
@@ -526,84 +549,81 @@ export const AprovacaoRetiradaPage: React.FC = () => {
         </Card>
       </Space>
 
-      {/* ── Drawer: Detalhes da retirada ──────────────────────────────────── */}
-      <Drawer
+      {/* ── Modal fullscreen: Detalhes da retirada ────────────────────────── */}
+      <Modal
+        open={drawerOpen}
+        onCancel={() => setDrawerOpen(false)}
+        width="95vw"
+        style={{ top: 16 }}
+        styles={{
+          body: {
+            maxHeight: "calc(100vh - 180px)",
+            overflowY: "auto",
+            padding: "24px 32px",
+          },
+          header: { borderBottom: `1px solid ${BStoriesThemeTokens.border}`, paddingBottom: 12 },
+        }}
         title={
           selectedRetirada ? (
-            <Space>
-              <Text strong>Retirada #{selectedRetirada.id}</Text>
+            <Space size="middle">
+              <Text strong style={{ fontSize: 18 }}>
+                Retirada #{selectedRetirada.id}
+              </Text>
               <StatusTag status={selectedRetirada.status as RetiradaStatus} />
+              <Text type="secondary" style={{ fontSize: 13 }}>
+                <ShopOutlined /> {selectedRetirada.loja} &nbsp;·&nbsp;
+                <UserOutlined /> {selectedRetirada.responsavel} &nbsp;·&nbsp;
+                <CalendarOutlined /> {formatDate(selectedRetirada.created_at)}
+              </Text>
             </Space>
           ) : (
             "Detalhes da Retirada"
           )
         }
-        open={drawerOpen}
-        onClose={() => setDrawerOpen(false)}
-        width={720}
-        extra={
-          selectedRetirada?.status === "pendente" && (
+        footer={
+          <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+            <Text type="secondary" style={{ fontSize: 12 }}>
+              {selectedRetirada ? `${selectedRetirada.items.length} produto(s) bipado(s)` : ""}
+            </Text>
             <Space>
-              <Button
-                type="primary"
-                icon={<CheckCircleOutlined />}
-                onClick={() => {
-                  setDrawerOpen(false);
-                  openApproveModal(selectedRetirada as unknown as RetiradaListItem);
-                }}
-              >
-                Aprovar
-              </Button>
-              <Button
-                danger
-                icon={<CloseCircleOutlined />}
-                onClick={() => {
-                  setDrawerOpen(false);
-                  openRejectModal(selectedRetirada as unknown as RetiradaListItem);
-                }}
-              >
-                Rejeitar
-              </Button>
+              <Button onClick={() => setDrawerOpen(false)}>Fechar</Button>
+              {selectedRetirada?.status === "pendente" && (
+                <>
+                  <Button
+                    danger
+                    icon={<CloseCircleOutlined />}
+                    onClick={() => {
+                      setDrawerOpen(false);
+                      openRejectModal(selectedRetirada as unknown as RetiradaListItem);
+                    }}
+                  >
+                    Rejeitar
+                  </Button>
+                  <Button
+                    type="primary"
+                    icon={<CheckCircleOutlined />}
+                    onClick={() => {
+                      setDrawerOpen(false);
+                      openApproveModal(selectedRetirada as unknown as RetiradaListItem);
+                    }}
+                  >
+                    Aprovar
+                  </Button>
+                </>
+              )}
             </Space>
-          )
+          </div>
         }
+        destroyOnHidden
       >
         {drawerLoading ? (
-          <div style={{ textAlign: "center", paddingTop: 80 }}>
+          <div style={{ textAlign: "center", paddingTop: 100 }}>
             <Spin size="large" tip="Carregando detalhes..." />
           </div>
         ) : selectedRetirada ? (
           <Space direction="vertical" size="large" style={{ width: "100%" }}>
 
-            {/* Informações gerais */}
-            <Row gutter={16}>
-              <Col span={12}>
-                <Space direction="vertical" size={4}>
-                  <Text type="secondary"><ShopOutlined /> Loja</Text>
-                  <Text strong style={{ fontSize: 18 }}>{selectedRetirada.loja}</Text>
-                </Space>
-              </Col>
-              <Col span={12}>
-                <Space direction="vertical" size={4}>
-                  <Text type="secondary"><UserOutlined /> Responsável</Text>
-                  <Text strong>{selectedRetirada.responsavel}</Text>
-                </Space>
-              </Col>
-              <Col span={12} style={{ marginTop: 12 }}>
-                <Space direction="vertical" size={4}>
-                  <Text type="secondary"><CalendarOutlined /> Solicitado em</Text>
-                  <Text>{formatDate(selectedRetirada.created_at)}</Text>
-                </Space>
-              </Col>
-              <Col span={12} style={{ marginTop: 12 }}>
-                <Space direction="vertical" size={4}>
-                  <Text type="secondary">Total de itens</Text>
-                  <Text strong>{selectedRetirada.items.length}</Text>
-                </Space>
-              </Col>
-            </Row>
-
-            {/* Info de aprovação */}
+            {/* Alertas de status */}
             {selectedRetirada.status === "aprovado" && (
               <Alert
                 type="success"
@@ -650,35 +670,74 @@ export const AprovacaoRetiradaPage: React.FC = () => {
               />
             )}
 
-            <Divider style={{ margin: "0" }} />
+            {/* Cards de resumo */}
+            <Row gutter={16}>
+              <Col xs={12} sm={6}>
+                <Card size="small" style={{ textAlign: "center" }}>
+                  <Text type="secondary" style={{ display: "block", fontSize: 12 }}>
+                    <ShopOutlined /> Loja
+                  </Text>
+                  <Text strong style={{ fontSize: 20 }}>{selectedRetirada.loja}</Text>
+                </Card>
+              </Col>
+              <Col xs={12} sm={6}>
+                <Card size="small" style={{ textAlign: "center" }}>
+                  <Text type="secondary" style={{ display: "block", fontSize: 12 }}>
+                    <UserOutlined /> Responsável
+                  </Text>
+                  <Text strong style={{ fontSize: 16 }}>{selectedRetirada.responsavel}</Text>
+                </Card>
+              </Col>
+              <Col xs={12} sm={6}>
+                <Card size="small" style={{ textAlign: "center" }}>
+                  <Text type="secondary" style={{ display: "block", fontSize: 12 }}>
+                    Total de Itens
+                  </Text>
+                  <Text strong style={{ fontSize: 20 }}>{selectedRetirada.items.length}</Text>
+                </Card>
+              </Col>
+              <Col xs={12} sm={6}>
+                <Card size="small" style={{ textAlign: "center" }}>
+                  <Text type="secondary" style={{ display: "block", fontSize: 12 }}>
+                    Valor Total
+                  </Text>
+                  <Text strong style={{ fontSize: 16, color: BStoriesThemeTokens.primary }}>
+                    {selectedRetirada.items
+                      .reduce((acc, item) => acc + Number(item.preco_custo ?? 0), 0)
+                      .toLocaleString("pt-BR", { style: "currency", currency: "BRL" })}
+                  </Text>
+                </Card>
+              </Col>
+            </Row>
+
+            <Divider style={{ margin: "4px 0" }} />
 
             {/* Tabela de itens */}
             <div>
-              <Text strong style={{ fontSize: 15, display: "block", marginBottom: 12 }}>
+              <Text strong style={{ fontSize: 16, display: "block", marginBottom: 14 }}>
                 Produtos Bipados ({selectedRetirada.items.length})
               </Text>
               <Table
                 columns={itemColumns}
                 dataSource={selectedRetirada.items}
                 rowKey="id"
-                size="small"
+                size="middle"
                 pagination={false}
-                scroll={{ x: 600 }}
                 rowClassName={(record) =>
                   !record.descricao ? "retirada-row-not-found" : ""
                 }
                 summary={() => {
                   const total = selectedRetirada.items.reduce(
-                    (acc, item) => acc + (item.preco_custo ?? 0),
+                    (acc, item) => acc + Number(item.preco_custo ?? 0),
                     0
                   );
                   return (
                     <Table.Summary.Row>
                       <Table.Summary.Cell index={0} colSpan={4}>
-                        <Text strong>Total</Text>
+                        <Text strong style={{ fontSize: 14 }}>Total</Text>
                       </Table.Summary.Cell>
                       <Table.Summary.Cell index={1} align="right">
-                        <Text strong>
+                        <Text strong style={{ fontSize: 14, color: BStoriesThemeTokens.primary }}>
                           {total.toLocaleString("pt-BR", {
                             style: "currency",
                             currency: "BRL",
@@ -692,7 +751,7 @@ export const AprovacaoRetiradaPage: React.FC = () => {
             </div>
           </Space>
         ) : null}
-      </Drawer>
+      </Modal>
 
       {/* ── Modal: Aprovar ────────────────────────────────────────────────── */}
       <Modal
@@ -708,7 +767,7 @@ export const AprovacaoRetiradaPage: React.FC = () => {
         okText="Confirmar Aprovação"
         cancelText="Cancelar"
         okButtonProps={{ loading: approveLoading }}
-        destroyOnClose
+        destroyOnHidden
       >
         {approveTarget && (
           <Space direction="vertical" style={{ width: "100%", marginBottom: 16 }}>
@@ -748,7 +807,7 @@ export const AprovacaoRetiradaPage: React.FC = () => {
         okText="Confirmar Rejeição"
         cancelText="Cancelar"
         okButtonProps={{ loading: rejectLoading, danger: true }}
-        destroyOnClose
+        destroyOnHidden
       >
         {rejectTarget && (
           <Space direction="vertical" style={{ width: "100%", marginBottom: 16 }}>
