@@ -1,7 +1,7 @@
 import React from "react";
 import { Link, useLocation } from "react-router-dom";
 import { BStoriesThemeTokens } from "../theme/bstories-tokens";
-import { ShopOutlined, QrcodeOutlined, BarChartOutlined, UploadOutlined } from '@ant-design/icons';
+import { ShopOutlined, QrcodeOutlined, BarChartOutlined, UploadOutlined, ContainerOutlined, CheckSquareOutlined } from '@ant-design/icons';
 
 const linkStyle = (active: boolean): React.CSSProperties => ({
   display: "block",
@@ -75,6 +75,16 @@ const SideBar: React.FC = () => {
         <Link to="/sugestao-vendas-dashboard" style={navItemStyle(location.pathname === "/sugestao-vendas-dashboard")}>
           <BarChartOutlined style={{ fontSize: 18 }} />
           <span className="sidebar-label">Sugestão de vendas</span>
+        </Link>
+
+        <Link to="/retirada-lojas" style={navItemStyle(location.pathname === "/retirada-lojas")}>
+          <ContainerOutlined style={{ fontSize: 18 }} />
+          <span className="sidebar-label">Retirada para Lojas</span>
+        </Link>
+
+        <Link to="/aprovacao-retiradas" style={navItemStyle(location.pathname === "/aprovacao-retiradas")}>
+          <CheckSquareOutlined style={{ fontSize: 18 }} />
+          <span className="sidebar-label">Aprovação de Retiradas</span>
         </Link>
       </nav>
 

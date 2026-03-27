@@ -6,6 +6,8 @@ import { MercadoLivreDashboardPage } from "./pages/MercadoLivreDashboardPage";
 import { RfidDashboardPage } from "./pages/RfidDashboardPage";
 import { SugestaoVendasDashboardPage } from "./pages/SugestaoVendasDashboardPage";
 import { ProductsImportPage } from "./pages/ProductsImportPage";
+import { RetiradaLojasPage } from "./pages/RetiradaLojasPage";
+import { AprovacaoRetiradaPage } from "./pages/AprovacaoRetiradaPage";
 import { Navigation } from "./components/Navigation";
 import { bstoriesTheme } from "./theme/antd-bstories-theme";
 import { BStoriesThemeTokens } from "./theme/bstories-tokens";
@@ -26,6 +28,8 @@ const App: React.FC = () => (
               path="/sugestao-vendas-dashboard"
               element={<SugestaoVendasDashboardPage />}
             />
+            <Route path="/retirada-lojas" element={<RetiradaLojasPage />} />
+            <Route path="/aprovacao-retiradas" element={<AprovacaoRetiradaPage />} />
           </Routes>
         </Layout>
       </Layout>
