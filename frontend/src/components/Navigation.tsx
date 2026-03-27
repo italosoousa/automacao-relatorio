@@ -2,7 +2,7 @@
 import React from 'react';
 import { Menu } from 'antd';
 import { useNavigate, useLocation } from 'react-router-dom';
-import { DashboardOutlined, FileTextOutlined, BarChartOutlined } from '@ant-design/icons';
+import { DashboardOutlined, FileTextOutlined, BarChartOutlined, ShopOutlined } from '@ant-design/icons';
 import type { MenuProps } from 'antd';
 
 export const Navigation: React.FC = () => {
@@ -24,6 +24,11 @@ export const Navigation: React.FC = () => {
       key: '/sugestao-vendas-dashboard',
       icon: <BarChartOutlined />,
       label: 'Sugestão Vendas',
+    },
+    {
+      key: '/retirada-lojas',
+      icon: <ShopOutlined />,
+      label: 'Retirada Lojas',
     },
   ];
 

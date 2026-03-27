@@ -5,6 +5,7 @@ import { BrowserRouter, Routes, Route } from "react-router-dom";
 import { MercadoLivreDashboardPage } from "./pages/MercadoLivreDashboardPage";
 import { RfidDashboardPage } from "./pages/RfidDashboardPage";
 import { SugestaoVendasDashboardPage } from "./pages/SugestaoVendasDashboardPage";
+import { RetiradaLojasPage } from "./pages/RetiradaLojasPage";
 import { Navigation } from "./components/Navigation";
 import { bstoriesTheme } from "./theme/antd-bstories-theme";
 import { BStoriesThemeTokens } from "./theme/bstories-tokens";
@@ -99,6 +100,7 @@ const App: React.FC = () => (
               path="/sugestao-vendas-dashboard"
               element={<SugestaoVendasDashboardPage />}
             />
+            <Route path="/retirada-lojas" element={<RetiradaLojasPage />} />
           </Routes>
         </Layout>
         <Footer
