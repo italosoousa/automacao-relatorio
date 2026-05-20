@@ -46,6 +46,7 @@ import {
   type RetiradaStatus,
 } from "../api/retiradaLojas";
 import { BStoriesThemeTokens } from "../theme/bstories-tokens";
+import { RobotProgressModal } from "../components/RobotProgressModal";
 
 const { Content } = Layout;
 const { Title, Text } = Typography;
@@ -111,6 +112,10 @@ export const AprovacaoRetiradaPage: React.FC = () => {
   const [approveTarget, setApproveTarget] = useState<RetiradaListItem | null>(null);
   const [approveLoading, setApproveLoading] = useState(false);
   const [approveForm] = Form.useForm();
+
+  // Modal do robô Playwright
+  const [robotModalOpen, setRobotModalOpen] = useState(false);
+  const [robotRetiradaId, setRobotRetiradaId] = useState<number | null>(null);
 
   // Modal de rejeição
   const [rejectModalOpen, setRejectModalOpen] = useState(false);
@@ -185,7 +190,7 @@ export const AprovacaoRetiradaPage: React.FC = () => {
 
       await aprovarRetirada(approveTarget.id, values.aprovado_por);
 
-      message.success(`Retirada #${approveTarget.id} aprovada com sucesso!`);
+      message.success(`Retirada #${approveTarget.id} aprovada! Iniciando robô...`);
       setApproveModalOpen(false);
 
       // Atualiza o drawer se estiver aberto na mesma retirada
@@ -193,6 +198,10 @@ export const AprovacaoRetiradaPage: React.FC = () => {
         const updated = await getRetirada(approveTarget.id);
         setSelectedRetirada(updated);
       }
+
+      // Abre o modal do robô para acompanhar a execução
+      setRobotRetiradaId(approveTarget.id);
+      setRobotModalOpen(true);
 
       await loadRetiradas();
     } catch (err: unknown) {
@@ -831,6 +840,14 @@ export const AprovacaoRetiradaPage: React.FC = () => {
           </Form.Item>
         </Form>
       </Modal>
+
+      {/* ── Modal do Robô Playwright ──────────────────────────────────────── */}
+      <RobotProgressModal
+        retiradaId={robotRetiradaId}
+        open={robotModalOpen}
+        onClose={() => setRobotModalOpen(false)}
+        onComplete={loadRetiradas}
+      />
 
       <style>{`
         .retirada-row-not-found td {

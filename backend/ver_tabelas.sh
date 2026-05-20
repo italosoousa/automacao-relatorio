@@ -1,4 +1,4 @@
-#!/bin/bash
+`#!/bin/bash
 
 echo "📊 Visualizando tabelas do banco de dados..."
 echo ""

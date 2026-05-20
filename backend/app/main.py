@@ -8,6 +8,7 @@ from app.api.sugestao_vendas_dashboard import router as sugestao_vendas_dashboar
 from app.api.products import router as products_router
 from app.api.logs import router as logs_router
 from app.api.retirada_lojas import router as retirada_lojas_router
+from app.api.retirada_robot_ws import router as retirada_robot_ws_router
 from app.core.config import settings
 from app.database import engine, Base
 import logging
@@ -52,3 +53,4 @@ app.include_router(sugestao_vendas_dashboard_router)
 app.include_router(products_router)
 app.include_router(logs_router)
 app.include_router(retirada_lojas_router)
+app.include_router(retirada_robot_ws_router)
